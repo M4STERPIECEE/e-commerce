@@ -1,0 +1,67 @@
+name: CI — Deploy (main)
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-test-docker:
+    name: Build, Test & Docker Build
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: ecommerce_test
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant execute permission to gradlew
+        run: chmod +x backend/gradlew
+
+      - name: Build and test
+        working-directory: backend
+        env:
+          POSTGRES_DB: ecommerce_test
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_PORT: 5432
+          DB_HOST: localhost
+          JWT_SECRET: ${{ secrets.JWT_SECRET || 'dGVzdC1zZWNyZXQtZm9yLWNpLXRlc3Rpbmctb25seS1ub3QtZm9yLXByb2R1Y3Rpb24=' }}
+          JWT_EXPIRATION_MS: 3600000
+          JWT_REFRESH_EXPIRATION_MS: 604800000
+          APP_PORT: 8080
+          ADMIN_EMAIL: admin@test.com
+          ADMIN_PASSWORD: testpassword
+        run: ./gradlew build test --no-daemon
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: false
+          tags: ecommerce-backend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -1,0 +1,120 @@
+package com.commerce.ecommerce.adapter.in.web.catalog;
+
+import com.commerce.ecommerce.adapter.in.web.common.ApiResponse;
+import com.commerce.ecommerce.application.port.in.catalog.*;
+import com.commerce.ecommerce.domain.model.Product;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.math.BigDecimal;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/v1/products")
+@RequiredArgsConstructor
+@Tag(name = "Products")
+public class ProductController {
+
+    private final CreateProductUseCase createProductUseCase;
+    private final UpdateProductUseCase updateProductUseCase;
+    private final DeleteProductUseCase deleteProductUseCase;
+    private final ListProductsUseCase listProductsUseCase;
+    private final GetProductDetailUseCase getProductDetailUseCase;
+    private final UpdateProductStockUseCase updateProductStockUseCase;
+
+    @GetMapping
+    @Operation(summary = "List products with filters and pagination (public)")
+    public ResponseEntity<ApiResponse<Page<Product>>> listProducts(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) UUID categoryId,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
+        Sort sort = sortDir.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        ProductFilter filter = ProductFilter.builder()
+                .search(search).categoryId(categoryId).minPrice(minPrice).maxPrice(maxPrice).build();
+        Page<Product> products = listProductsUseCase.listProducts(filter, PageRequest.of(page, size, sort));
+        return ResponseEntity.ok(ApiResponse.success(products));
+    }
+
+    @GetMapping("/{id}")
+    @Operation(summary = "Get product detail (public)")
+    public ResponseEntity<ApiResponse<Product>> getProduct(@PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.success(getProductDetailUseCase.getProduct(id)));
+    }
+
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Create product (admin only)")
+    public ResponseEntity<ApiResponse<Product>> createProduct(@Valid @RequestBody ProductRequest request) {
+        Product product = createProductUseCase.createProduct(CreateProductCommand.builder()
+                .name(request.getName()).description(request.getDescription())
+                .price(request.getPrice()).stock(request.getStock())
+                .imageUrl(request.getImageUrl()).active(request.isActive())
+                .categoryId(request.getCategoryId()).build());
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(product));
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Update product (admin only)")
+    public ResponseEntity<ApiResponse<Product>> updateProduct(@PathVariable UUID id,
+                                                               @Valid @RequestBody ProductRequest request) {
+        Product product = updateProductUseCase.updateProduct(UpdateProductCommand.builder()
+                .id(id).name(request.getName()).description(request.getDescription())
+                .price(request.getPrice()).stock(request.getStock())
+                .imageUrl(request.getImageUrl()).active(request.isActive())
+                .categoryId(request.getCategoryId()).build());
+        return ResponseEntity.ok(ApiResponse.success(product));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Delete product (admin only)")
+    public ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable UUID id) {
+        deleteProductUseCase.deleteProduct(id);
+        return ResponseEntity.ok(ApiResponse.success("Product deleted", null));
+    }
+
+    @PatchMapping("/{id}/stock")
+    @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Update product stock (admin only)")
+    public ResponseEntity<ApiResponse<Void>> updateStock(@PathVariable UUID id,
+                                                          @RequestParam int quantity) {
+        updateProductStockUseCase.updateStock(id, quantity);
+        return ResponseEntity.ok(ApiResponse.success("Stock updated", null));
+    }
+
+    @Data
+    static class ProductRequest {
+        @NotBlank private String name;
+        private String description;
+        @NotNull @Positive private BigDecimal price;
+        @PositiveOrZero private int stock;
+        private String imageUrl;
+        private boolean active = true;
+        private UUID categoryId;
+    }
+}
