@@ -20,15 +20,16 @@ import java.util.stream.Collectors;
 public class ProductPersistenceAdapter implements ProductRepositoryPort {
 
     private final ProductJpaRepository repository;
+    private final ProductMapper mapper;
 
     @Override
     public Product save(Product product) {
-        return ProductMapper.toDomain(repository.save(ProductMapper.toEntity(product)));
+        return mapper.toDomain(repository.save(mapper.toEntity(product)));
     }
 
     @Override
     public Optional<Product> findById(UUID id) {
-        return repository.findById(id).map(ProductMapper::toDomain);
+        return repository.findById(id).map(mapper::toDomain);
     }
 
     @Override
@@ -44,13 +45,13 @@ public class ProductPersistenceAdapter implements ProductRepositoryPort {
     @Override
     public Page<Product> findAll(String search, UUID categoryId, BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable) {
         return repository.findWithFilters(search, categoryId, minPrice, maxPrice, pageable)
-                .map(ProductMapper::toDomain);
+                .map(mapper::toDomain);
     }
 
     @Override
     public List<Product> findAllById(List<UUID> ids) {
         return repository.findAllById(ids).stream()
-                .map(ProductMapper::toDomain)
+                .map(mapper::toDomain)
                 .collect(Collectors.toList());
     }
 }

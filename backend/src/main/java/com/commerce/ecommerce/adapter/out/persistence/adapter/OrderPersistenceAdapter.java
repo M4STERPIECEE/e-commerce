@@ -17,29 +17,30 @@ import java.util.UUID;
 public class OrderPersistenceAdapter implements OrderRepositoryPort {
 
     private final OrderJpaRepository repository;
+    private final OrderMapper mapper;
 
     @Override
     public Order save(Order order) {
-        return OrderMapper.toDomain(repository.save(OrderMapper.toEntity(order)));
+        return mapper.toDomain(repository.save(mapper.toEntity(order)));
     }
 
     @Override
     public Optional<Order> findById(UUID id) {
-        return repository.findById(id).map(OrderMapper::toDomain);
+        return repository.findById(id).map(mapper::toDomain);
     }
 
     @Override
     public Page<Order> findByUserId(UUID userId, Pageable pageable) {
-        return repository.findByUserId(userId, pageable).map(OrderMapper::toDomain);
+        return repository.findByUserId(userId, pageable).map(mapper::toDomain);
     }
 
     @Override
     public Page<Order> findAll(Pageable pageable) {
-        return repository.findAll(pageable).map(OrderMapper::toDomain);
+        return repository.findAll(pageable).map(mapper::toDomain);
     }
 
     @Override
     public Optional<Order> findByIdAndUserId(UUID id, UUID userId) {
-        return repository.findByIdAndUserId(id, userId).map(OrderMapper::toDomain);
+        return repository.findByIdAndUserId(id, userId).map(mapper::toDomain);
     }
 }

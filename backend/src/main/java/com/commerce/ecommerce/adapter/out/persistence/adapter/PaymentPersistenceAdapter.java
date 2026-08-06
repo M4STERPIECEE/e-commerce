@@ -15,19 +15,20 @@ import java.util.UUID;
 public class PaymentPersistenceAdapter implements PaymentRepositoryPort {
 
     private final PaymentJpaRepository repository;
+    private final PaymentMapper mapper;
 
     @Override
     public Payment save(Payment payment) {
-        return PaymentMapper.toDomain(repository.save(PaymentMapper.toEntity(payment)));
+        return mapper.toDomain(repository.save(mapper.toEntity(payment)));
     }
 
     @Override
     public Optional<Payment> findByOrderId(UUID orderId) {
-        return repository.findByOrderId(orderId).map(PaymentMapper::toDomain);
+        return repository.findByOrderId(orderId).map(mapper::toDomain);
     }
 
     @Override
     public Optional<Payment> findById(UUID id) {
-        return repository.findById(id).map(PaymentMapper::toDomain);
+        return repository.findById(id).map(mapper::toDomain);
     }
 }

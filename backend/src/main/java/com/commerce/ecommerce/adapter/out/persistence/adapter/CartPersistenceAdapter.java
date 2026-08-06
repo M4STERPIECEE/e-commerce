@@ -16,19 +16,20 @@ import java.util.UUID;
 public class CartPersistenceAdapter implements CartRepositoryPort {
 
     private final CartJpaRepository repository;
+    private final CartMapper mapper;
 
     @Override
     public Cart save(Cart cart) {
-        return CartMapper.toDomain(repository.save(CartMapper.toEntity(cart)));
+        return mapper.toDomain(repository.save(mapper.toEntity(cart)));
     }
 
     @Override
     public Optional<Cart> findActiveCartByUserId(UUID userId) {
-        return repository.findByUserIdAndStatus(userId, CartStatus.ACTIVE).map(CartMapper::toDomain);
+        return repository.findByUserIdAndStatus(userId, CartStatus.ACTIVE).map(mapper::toDomain);
     }
 
     @Override
     public Optional<Cart> findById(UUID id) {
-        return repository.findById(id).map(CartMapper::toDomain);
+        return repository.findById(id).map(mapper::toDomain);
     }
 }

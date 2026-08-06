@@ -12,7 +12,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.UUID;
 
 @RestController
@@ -25,6 +24,7 @@ public class AuthController {
     private final RefreshTokenUseCase refreshTokenUseCase;
     private final GetCurrentUserUseCase getCurrentUserUseCase;
     private final UserJpaRepository userJpaRepository;
+    private final UserProfileMapper userProfileMapper;
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<UserProfileResponse>> register(@Valid @RequestBody RegisterRequest request) {
@@ -35,7 +35,7 @@ public class AuthController {
                 .lastName(request.getLastName())
                 .build());
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("User registered successfully", toProfileResponse(user)));
+                .body(ApiResponse.success("User registered successfully", userProfileMapper.toResponse(user)));
     }
 
     @PostMapping("/login")
@@ -60,17 +60,6 @@ public class AuthController {
                 .map(e -> e.getId())
                 .orElseThrow();
         User user = getCurrentUserUseCase.getCurrentUser(userId);
-        return ResponseEntity.ok(ApiResponse.success(toProfileResponse(user)));
-    }
-
-    private UserProfileResponse toProfileResponse(User user) {
-        return UserProfileResponse.builder()
-                .id(user.getId())
-                .email(user.getEmail())
-                .firstName(user.getFirstName())
-                .lastName(user.getLastName())
-                .role(user.getRole())
-                .createdAt(user.getCreatedAt())
-                .build();
+        return ResponseEntity.ok(ApiResponse.success(userProfileMapper.toResponse(user)));
     }
 }
