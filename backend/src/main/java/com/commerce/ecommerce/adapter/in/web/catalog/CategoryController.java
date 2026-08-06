@@ -1,5 +1,6 @@
 package com.commerce.ecommerce.adapter.in.web.catalog;
 
+import com.commerce.ecommerce.adapter.in.web.catalog.dto.CategoryRequest;
 import com.commerce.ecommerce.adapter.in.web.common.ApiResponse;
 import com.commerce.ecommerce.application.port.in.catalog.CreateCategoryCommand;
 import com.commerce.ecommerce.application.port.in.catalog.CreateCategoryUseCase;
@@ -8,8 +9,6 @@ import com.commerce.ecommerce.application.usecase.catalog.CategoryService;
 import com.commerce.ecommerce.domain.model.Category;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -56,12 +55,5 @@ public class CategoryController {
     public ResponseEntity<ApiResponse<Void>> deleteCategory(@PathVariable UUID id) {
         categoryService.deleteCategory(id);
         return ResponseEntity.ok(ApiResponse.success("Category deleted", null));
-    }
-
-    @Data
-    static class CategoryRequest {
-        @NotBlank private String name;
-        @NotBlank private String slug;
-        private String description;
     }
 }

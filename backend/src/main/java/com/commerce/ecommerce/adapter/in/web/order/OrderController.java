@@ -1,12 +1,11 @@
 package com.commerce.ecommerce.adapter.in.web.order;
 
 import com.commerce.ecommerce.adapter.in.web.common.ApiResponse;
-import com.commerce.ecommerce.adapter.out.persistence.repository.UserJpaRepository;
+import com.commerce.ecommerce.adapter.in.web.order.dto.CheckoutRequest;
 import com.commerce.ecommerce.application.port.in.order.*;
 import com.commerce.ecommerce.domain.model.Order;
 import com.commerce.ecommerce.domain.model.enums.OrderStatus;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -32,14 +31,12 @@ public class OrderController {
     private final ListAllOrdersUseCase listAllOrdersUseCase;
     private final UpdateOrderStatusUseCase updateOrderStatusUseCase;
     private final CancelOrderUseCase cancelOrderUseCase;
-    private final UserJpaRepository userJpaRepository;
 
     @PostMapping("/checkout")
     public ResponseEntity<ApiResponse<Order>> checkout(@AuthenticationPrincipal UserDetails userDetails,
             @RequestBody CheckoutRequest request) {
-        UUID userId = resolveUserId(userDetails);
         Order order = createOrderFromCartUseCase.createOrder(CreateOrderCommand.builder()
-                .userId(userId).shippingAddress(request.getShippingAddress()).build());
+                .email(userDetails.getUsername()).shippingAddress(request.getShippingAddress()).build());
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(order));
     }
 
@@ -47,8 +44,7 @@ public class OrderController {
     public ResponseEntity<ApiResponse<Page<Order>>> listOrders(@AuthenticationPrincipal UserDetails userDetails,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        UUID userId = resolveUserId(userDetails);
-        Page<Order> orders = listUserOrdersUseCase.listUserOrders(userId,
+        Page<Order> orders = listUserOrdersUseCase.listUserOrders(userDetails.getUsername(),
                 PageRequest.of(page, size, Sort.by("createdAt").descending()));
         return ResponseEntity.ok(ApiResponse.success(orders));
     }
@@ -56,19 +52,16 @@ public class OrderController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<Order>> getOrder(@AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID id) {
-        UUID userId = resolveUserId(userDetails);
-        return ResponseEntity.ok(ApiResponse.success(getOrderDetailUseCase.getOrder(id, userId)));
+        return ResponseEntity.ok(ApiResponse.success(getOrderDetailUseCase.getOrder(id, userDetails.getUsername())));
     }
 
     @PostMapping("/{id}/cancel")
     public ResponseEntity<ApiResponse<Void>> cancelOrder(@AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID id) {
-        UUID userId = resolveUserId(userDetails);
-        cancelOrderUseCase.cancelOrder(id, userId);
+        cancelOrderUseCase.cancelOrder(id, userDetails.getUsername());
         return ResponseEntity.ok(ApiResponse.success("Order cancelled", null));
     }
 
-    // Admin endpoints
     @GetMapping("/admin/all")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Page<Order>>> listAllOrders(@RequestParam(defaultValue = "0") int page,
@@ -85,16 +78,5 @@ public class OrderController {
         Order order = updateOrderStatusUseCase.updateStatus(UpdateOrderStatusCommand.builder()
                 .orderId(id).newStatus(status).build());
         return ResponseEntity.ok(ApiResponse.success(order));
-    }
-
-    private UUID resolveUserId(UserDetails userDetails) {
-        return userJpaRepository.findByEmail(userDetails.getUsername())
-                .map(e -> e.getId())
-                .orElseThrow();
-    }
-
-    @Data
-    static class CheckoutRequest {
-        private String shippingAddress;
     }
 }

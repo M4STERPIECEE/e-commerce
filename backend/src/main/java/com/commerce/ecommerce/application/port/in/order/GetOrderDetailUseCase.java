@@ -5,5 +5,5 @@ import com.commerce.ecommerce.domain.model.Order;
 import java.util.UUID;
 
 public interface GetOrderDetailUseCase {
-    Order getOrder(UUID orderId, UUID userId);
+    Order getOrder(UUID orderId, String email);
 }

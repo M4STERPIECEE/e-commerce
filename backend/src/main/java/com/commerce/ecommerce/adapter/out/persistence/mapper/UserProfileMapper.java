@@ -1,4 +1,4 @@
-package com.commerce.ecommerce.adapter.in.web.auth.mapper;
+package com.commerce.ecommerce.adapter.out.persistence.mapper;
 
 import com.commerce.ecommerce.adapter.in.web.auth.dto.UserProfileResponse;
 import com.commerce.ecommerce.domain.model.User;

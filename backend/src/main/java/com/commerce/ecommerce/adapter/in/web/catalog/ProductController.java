@@ -1,15 +1,11 @@
 package com.commerce.ecommerce.adapter.in.web.catalog;
 
+import com.commerce.ecommerce.adapter.in.web.catalog.dto.ProductRequest;
 import com.commerce.ecommerce.adapter.in.web.common.ApiResponse;
 import com.commerce.ecommerce.application.port.in.catalog.*;
 import com.commerce.ecommerce.domain.model.Product;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.PositiveOrZero;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -95,16 +91,5 @@ public class ProductController {
                                                           @RequestParam int quantity) {
         updateProductStockUseCase.updateStock(id, quantity);
         return ResponseEntity.ok(ApiResponse.success("Stock updated", null));
-    }
-
-    @Data
-    static class ProductRequest {
-        @NotBlank private String name;
-        private String description;
-        @NotNull @Positive private BigDecimal price;
-        @PositiveOrZero private int stock;
-        private String imageUrl;
-        private boolean active = true;
-        private UUID categoryId;
     }
 }
