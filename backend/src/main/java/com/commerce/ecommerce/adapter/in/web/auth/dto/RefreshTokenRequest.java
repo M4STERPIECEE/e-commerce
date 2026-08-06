@@ -1,4 +1,4 @@
-package com.commerce.ecommerce.adapter.in.web.auth;
+package com.commerce.ecommerce.adapter.in.web.auth.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
