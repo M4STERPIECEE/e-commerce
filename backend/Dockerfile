@@ -9,10 +9,10 @@ COPY settings.gradle .
 
 RUN chmod +x ./gradlew
 
-RUN ./gradlew dependencies --no-daemon || true
+RUN --mount=type=cache,target=/root/.gradle ./gradlew dependencies --no-daemon || true
 
 COPY src src
-RUN ./gradlew bootJar --no-daemon -x test
+RUN --mount=type=cache,target=/root/.gradle ./gradlew bootJar --no-daemon -x test
 
 FROM eclipse-temurin:21-jre-alpine AS runtime
 
