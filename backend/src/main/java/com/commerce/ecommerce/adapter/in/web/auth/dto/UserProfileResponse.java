@@ -1,4 +1,4 @@
-package com.commerce.ecommerce.adapter.in.web.auth;
+package com.commerce.ecommerce.adapter.in.web.auth.dto;
 
 import com.commerce.ecommerce.domain.model.enums.UserRole;
 import lombok.Builder;

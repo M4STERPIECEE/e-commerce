@@ -17,20 +17,21 @@ import java.util.stream.Collectors;
 public class CategoryPersistenceAdapter implements CategoryRepositoryPort {
 
     private final CategoryJpaRepository repository;
+    private final CategoryMapper mapper;
 
     @Override
     public Category save(Category category) {
-        return CategoryMapper.toDomain(repository.save(CategoryMapper.toEntity(category)));
+        return mapper.toDomain(repository.save(mapper.toEntity(category)));
     }
 
     @Override
     public Optional<Category> findById(UUID id) {
-        return repository.findById(id).map(CategoryMapper::toDomain);
+        return repository.findById(id).map(mapper::toDomain);
     }
 
     @Override
     public List<Category> findAll() {
-        return repository.findAll().stream().map(CategoryMapper::toDomain).collect(Collectors.toList());
+        return repository.findAll().stream().map(mapper::toDomain).collect(Collectors.toList());
     }
 
     @Override

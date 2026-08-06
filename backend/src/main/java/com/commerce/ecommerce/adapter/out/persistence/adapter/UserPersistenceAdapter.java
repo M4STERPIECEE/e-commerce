@@ -15,20 +15,21 @@ import java.util.UUID;
 public class UserPersistenceAdapter implements UserRepositoryPort {
 
     private final UserJpaRepository repository;
+    private final UserMapper mapper;
 
     @Override
     public User save(User user) {
-        return UserMapper.toDomain(repository.save(UserMapper.toEntity(user)));
+        return mapper.toDomain(repository.save(mapper.toEntity(user)));
     }
 
     @Override
     public Optional<User> findById(UUID id) {
-        return repository.findById(id).map(UserMapper::toDomain);
+        return repository.findById(id).map(mapper::toDomain);
     }
 
     @Override
     public Optional<User> findByEmail(String email) {
-        return repository.findByEmail(email).map(UserMapper::toDomain);
+        return repository.findByEmail(email).map(mapper::toDomain);
     }
 
     @Override
