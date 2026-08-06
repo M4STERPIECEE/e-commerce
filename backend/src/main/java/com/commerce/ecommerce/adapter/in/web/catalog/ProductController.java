@@ -3,9 +3,7 @@ package com.commerce.ecommerce.adapter.in.web.catalog;
 import com.commerce.ecommerce.adapter.in.web.common.ApiResponse;
 import com.commerce.ecommerce.application.port.in.catalog.*;
 import com.commerce.ecommerce.domain.model.Product;
-import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -20,14 +18,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
 import java.math.BigDecimal;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/products")
+@RequestMapping("/api/${version.path}/products")
 @RequiredArgsConstructor
-@Tag(name = "Products")
 public class ProductController {
 
     private final CreateProductUseCase createProductUseCase;
@@ -38,7 +34,6 @@ public class ProductController {
     private final UpdateProductStockUseCase updateProductStockUseCase;
 
     @GetMapping
-    @Operation(summary = "List products with filters and pagination (public)")
     public ResponseEntity<ApiResponse<Page<Product>>> listProducts(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) UUID categoryId,
@@ -56,7 +51,6 @@ public class ProductController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get product detail (public)")
     public ResponseEntity<ApiResponse<Product>> getProduct(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.success(getProductDetailUseCase.getProduct(id)));
     }
@@ -64,7 +58,6 @@ public class ProductController {
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     @SecurityRequirement(name = "bearerAuth")
-    @Operation(summary = "Create product (admin only)")
     public ResponseEntity<ApiResponse<Product>> createProduct(@Valid @RequestBody ProductRequest request) {
         Product product = createProductUseCase.createProduct(CreateProductCommand.builder()
                 .name(request.getName()).description(request.getDescription())
@@ -77,7 +70,6 @@ public class ProductController {
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     @SecurityRequirement(name = "bearerAuth")
-    @Operation(summary = "Update product (admin only)")
     public ResponseEntity<ApiResponse<Product>> updateProduct(@PathVariable UUID id,
                                                                @Valid @RequestBody ProductRequest request) {
         Product product = updateProductUseCase.updateProduct(UpdateProductCommand.builder()
@@ -91,7 +83,6 @@ public class ProductController {
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     @SecurityRequirement(name = "bearerAuth")
-    @Operation(summary = "Delete product (admin only)")
     public ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable UUID id) {
         deleteProductUseCase.deleteProduct(id);
         return ResponseEntity.ok(ApiResponse.success("Product deleted", null));
@@ -100,7 +91,6 @@ public class ProductController {
     @PatchMapping("/{id}/stock")
     @PreAuthorize("hasRole('ADMIN')")
     @SecurityRequirement(name = "bearerAuth")
-    @Operation(summary = "Update product stock (admin only)")
     public ResponseEntity<ApiResponse<Void>> updateStock(@PathVariable UUID id,
                                                           @RequestParam int quantity) {
         updateProductStockUseCase.updateStock(id, quantity);

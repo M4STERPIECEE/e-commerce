@@ -5,9 +5,7 @@ import com.commerce.ecommerce.adapter.out.persistence.repository.UserJpaReposito
 import com.commerce.ecommerce.application.port.in.order.*;
 import com.commerce.ecommerce.domain.model.Order;
 import com.commerce.ecommerce.domain.model.enums.OrderStatus;
-import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -23,10 +21,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/orders")
+@RequestMapping("/api/${version.path}/orders")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "bearerAuth")
-@Tag(name = "Orders")
 public class OrderController {
 
     private final CreateOrderFromCartUseCase createOrderFromCartUseCase;
@@ -38,7 +35,6 @@ public class OrderController {
     private final UserJpaRepository userJpaRepository;
 
     @PostMapping("/checkout")
-    @Operation(summary = "Checkout — create order from cart")
     public ResponseEntity<ApiResponse<Order>> checkout(@AuthenticationPrincipal UserDetails userDetails,
             @RequestBody CheckoutRequest request) {
         UUID userId = resolveUserId(userDetails);
@@ -48,7 +44,6 @@ public class OrderController {
     }
 
     @GetMapping
-    @Operation(summary = "List user orders")
     public ResponseEntity<ApiResponse<Page<Order>>> listOrders(@AuthenticationPrincipal UserDetails userDetails,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
@@ -59,7 +54,6 @@ public class OrderController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get order detail")
     public ResponseEntity<ApiResponse<Order>> getOrder(@AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID id) {
         UUID userId = resolveUserId(userDetails);
@@ -67,7 +61,6 @@ public class OrderController {
     }
 
     @PostMapping("/{id}/cancel")
-    @Operation(summary = "Cancel order (if PENDING)")
     public ResponseEntity<ApiResponse<Void>> cancelOrder(@AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID id) {
         UUID userId = resolveUserId(userDetails);
@@ -78,7 +71,6 @@ public class OrderController {
     // Admin endpoints
     @GetMapping("/admin/all")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "List all orders (admin only)")
     public ResponseEntity<ApiResponse<Page<Order>>> listAllOrders(@RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         Page<Order> orders = listAllOrdersUseCase.listAllOrders(
@@ -88,7 +80,6 @@ public class OrderController {
 
     @PatchMapping("/admin/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Update order status (admin only)")
     public ResponseEntity<ApiResponse<Order>> updateStatus(@PathVariable UUID id,
             @RequestParam OrderStatus status) {
         Order order = updateOrderStatusUseCase.updateStatus(UpdateOrderStatusCommand.builder()
