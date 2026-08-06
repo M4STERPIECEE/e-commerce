@@ -27,11 +27,19 @@ public class OrderService implements CreateOrderFromCartUseCase, GetOrderDetailU
     private final CartRepositoryPort cartRepository;
     private final ProductRepositoryPort productRepository;
     private final OrderRepositoryPort orderRepository;
+    private final UserRepositoryPort userRepository;
+
+    private UUID resolveUserId(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException(email))
+                .getId();
+    }
 
     @Override
     public Order createOrder(CreateOrderCommand command) {
-        Cart cart = cartRepository.findActiveCartByUserId(command.getUserId())
-                .orElseThrow(() -> new CartNotFoundException(command.getUserId()));
+        UUID userId = resolveUserId(command.getEmail());
+        Cart cart = cartRepository.findActiveCartByUserId(userId)
+                .orElseThrow(() -> new CartNotFoundException(userId));
 
         if (cart.getItems().isEmpty()) {
             throw new InvalidOrderStatusException("Cannot create order from an empty cart");
@@ -67,7 +75,7 @@ public class OrderService implements CreateOrderFromCartUseCase, GetOrderDetailU
         }
 
         Order order = Order.builder()
-                .userId(command.getUserId())
+                .userId(userId)
                 .status(OrderStatus.PENDING)
                 .totalAmount(total)
                 .shippingAddress(command.getShippingAddress())
@@ -87,15 +95,15 @@ public class OrderService implements CreateOrderFromCartUseCase, GetOrderDetailU
 
     @Override
     @Transactional(readOnly = true)
-    public Order getOrder(UUID orderId, UUID userId) {
-        return orderRepository.findByIdAndUserId(orderId, userId)
+    public Order getOrder(UUID orderId, String email) {
+        return orderRepository.findByIdAndUserId(orderId, resolveUserId(email))
                 .orElseThrow(() -> new OrderNotFoundException(orderId));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<Order> listUserOrders(UUID userId, Pageable pageable) {
-        return orderRepository.findByUserId(userId, pageable);
+    public Page<Order> listUserOrders(String email, Pageable pageable) {
+        return orderRepository.findByUserId(resolveUserId(email), pageable);
     }
 
     @Override
@@ -114,8 +122,8 @@ public class OrderService implements CreateOrderFromCartUseCase, GetOrderDetailU
     }
 
     @Override
-    public void cancelOrder(UUID orderId, UUID userId) {
-        Order order = orderRepository.findByIdAndUserId(orderId, userId)
+    public void cancelOrder(UUID orderId, String email) {
+        Order order = orderRepository.findByIdAndUserId(orderId, resolveUserId(email))
                 .orElseThrow(() -> new OrderNotFoundException(orderId));
         if (order.getStatus() != OrderStatus.PENDING) {
             throw new InvalidOrderStatusException(order.getStatus(), OrderStatus.CANCELLED);
