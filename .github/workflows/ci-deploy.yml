@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-test-docker:
-    name: Build, Test & Docker Build
+    name: build, test & Docker Build
     runs-on: ubuntu-latest
 
     services:
@@ -40,24 +40,12 @@ jobs:
 
       - name: Build and test
         working-directory: backend
-        env:
-          POSTGRES_DB: ecommerce_test
-          POSTGRES_USER: test_user
-          POSTGRES_PASSWORD: test_password
-          POSTGRES_PORT: 5432
-          DB_HOST: localhost
-          JWT_SECRET: ${{ secrets.JWT_SECRET || 'dGVzdC1zZWNyZXQtZm9yLWNpLXRlc3Rpbmctb25seS1ub3QtZm9yLXByb2R1Y3Rpb24=' }}
-          JWT_EXPIRATION_MS: 3600000
-          JWT_REFRESH_EXPIRATION_MS: 604800000
-          APP_PORT: 8080
-          ADMIN_EMAIL: admin@test.com
-          ADMIN_PASSWORD: testpassword
         run: ./gradlew build test --no-daemon
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker image (no push)
+      - name: Build Docker image
         uses: docker/build-push-action@v6
         with:
           context: ./backend

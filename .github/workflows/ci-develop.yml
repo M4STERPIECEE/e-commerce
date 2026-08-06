@@ -42,18 +42,6 @@ jobs:
 
       - name: Build and run tests
         working-directory: backend
-        env:
-          POSTGRES_DB: ecommerce_test
-          POSTGRES_USER: test_user
-          POSTGRES_PASSWORD: test_password
-          POSTGRES_PORT: 5432
-          DB_HOST: localhost
-          JWT_SECRET: ${{ secrets.JWT_SECRET || 'dGVzdC1zZWNyZXQtZm9yLWNpLXRlc3Rpbmctb25seS1ub3QtZm9yLXByb2R1Y3Rpb24=' }}
-          JWT_EXPIRATION_MS: 3600000
-          JWT_REFRESH_EXPIRATION_MS: 604800000
-          APP_PORT: 8080
-          ADMIN_EMAIL: admin@test.com
-          ADMIN_PASSWORD: testpassword
         run: ./gradlew build test jacocoTestReport --no-daemon
 
       - name: Upload JaCoCo coverage report
