@@ -2,9 +2,10 @@ package com.commerce.ecommerce.adapter.in.web.order;
 
 import com.commerce.ecommerce.adapter.in.web.common.ApiResponse;
 import com.commerce.ecommerce.adapter.in.web.order.dto.CheckoutRequest;
+import com.commerce.ecommerce.adapter.in.web.order.dto.OrderResponse;
 import com.commerce.ecommerce.adapter.out.persistence.mapper.OrderCommandMapper;
+import com.commerce.ecommerce.adapter.out.persistence.mapper.OrderResponseMapper;
 import com.commerce.ecommerce.application.port.in.order.*;
-import com.commerce.ecommerce.domain.model.Order;
 import com.commerce.ecommerce.domain.model.enums.OrderStatus;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
@@ -33,28 +34,32 @@ public class OrderController {
     private final UpdateOrderStatusUseCase updateOrderStatusUseCase;
     private final CancelOrderUseCase cancelOrderUseCase;
     private final OrderCommandMapper orderMapper;
+    private final OrderResponseMapper orderResponseMapper;
 
     @PostMapping("/checkout")
-    public ResponseEntity<ApiResponse<Order>> checkout(@AuthenticationPrincipal UserDetails userDetails,
+    public ResponseEntity<ApiResponse<OrderResponse>> checkout(@AuthenticationPrincipal UserDetails userDetails,
             @RequestBody CheckoutRequest request) {
-        Order order = createOrderFromCartUseCase.createOrder(
-                orderMapper.toCreateOrderCommand(userDetails.getUsername(), request));
+        OrderResponse order = orderResponseMapper.toResponse(
+                createOrderFromCartUseCase.createOrder(
+                        orderMapper.toCreateOrderCommand(userDetails.getUsername(), request)));
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(order));
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<Page<Order>>> listOrders(@AuthenticationPrincipal UserDetails userDetails,
+    public ResponseEntity<ApiResponse<Page<OrderResponse>>> listOrders(@AuthenticationPrincipal UserDetails userDetails,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        Page<Order> orders = listUserOrdersUseCase.listUserOrders(userDetails.getUsername(),
-                PageRequest.of(page, size, Sort.by("createdAt").descending()));
+        Page<OrderResponse> orders = orderResponseMapper.toResponse(
+                listUserOrdersUseCase.listUserOrders(userDetails.getUsername(),
+                        PageRequest.of(page, size, Sort.by("createdAt").descending())));
         return ResponseEntity.ok(ApiResponse.success(orders));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<Order>> getOrder(@AuthenticationPrincipal UserDetails userDetails,
+    public ResponseEntity<ApiResponse<OrderResponse>> getOrder(@AuthenticationPrincipal UserDetails userDetails,
             @PathVariable UUID id) {
-        return ResponseEntity.ok(ApiResponse.success(getOrderDetailUseCase.getOrder(id, userDetails.getUsername())));
+        return ResponseEntity.ok(ApiResponse.success(orderResponseMapper.toResponse(
+                getOrderDetailUseCase.getOrder(id, userDetails.getUsername()))));
     }
 
     @PostMapping("/{id}/cancel")
@@ -66,18 +71,20 @@ public class OrderController {
 
     @GetMapping("/admin/all")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Page<Order>>> listAllOrders(@RequestParam(defaultValue = "0") int page,
+    public ResponseEntity<ApiResponse<Page<OrderResponse>>> listAllOrders(@RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        Page<Order> orders = listAllOrdersUseCase.listAllOrders(
-                PageRequest.of(page, size, Sort.by("createdAt").descending()));
+        Page<OrderResponse> orders = orderResponseMapper.toResponse(
+                listAllOrdersUseCase.listAllOrders(
+                        PageRequest.of(page, size, Sort.by("createdAt").descending())));
         return ResponseEntity.ok(ApiResponse.success(orders));
     }
 
     @PatchMapping("/admin/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Order>> updateStatus(@PathVariable UUID id,
+    public ResponseEntity<ApiResponse<OrderResponse>> updateStatus(@PathVariable UUID id,
             @RequestParam OrderStatus status) {
-        Order order = updateOrderStatusUseCase.updateStatus(orderMapper.toUpdateOrderStatusCommand(id, status));
+        OrderResponse order = orderResponseMapper.toResponse(
+                updateOrderStatusUseCase.updateStatus(orderMapper.toUpdateOrderStatusCommand(id, status)));
         return ResponseEntity.ok(ApiResponse.success(order));
     }
 }

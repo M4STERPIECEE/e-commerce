@@ -59,7 +59,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(InvalidOrderStatusException.class)
     public ResponseEntity<ApiResponse<Void>> handleInvalidOrderStatus(InvalidOrderStatusException ex) {
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ApiResponse.error(ex.getMessage()));
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT).body(ApiResponse.error(ex.getMessage()));
     }
 
     @ExceptionHandler(UnauthorizedException.class)

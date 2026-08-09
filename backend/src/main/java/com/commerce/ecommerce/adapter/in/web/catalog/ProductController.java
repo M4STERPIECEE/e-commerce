@@ -1,10 +1,11 @@
 package com.commerce.ecommerce.adapter.in.web.catalog;
 
 import com.commerce.ecommerce.adapter.in.web.catalog.dto.ProductRequest;
+import com.commerce.ecommerce.adapter.in.web.catalog.dto.ProductResponse;
 import com.commerce.ecommerce.adapter.in.web.common.ApiResponse;
 import com.commerce.ecommerce.adapter.out.persistence.mapper.CatalogCommandMapper;
+import com.commerce.ecommerce.adapter.out.persistence.mapper.ProductResponseMapper;
 import com.commerce.ecommerce.application.port.in.catalog.*;
-import com.commerce.ecommerce.domain.model.Product;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -30,9 +31,10 @@ public class ProductController {
     private final GetProductDetailUseCase getProductDetailUseCase;
     private final UpdateProductStockUseCase updateProductStockUseCase;
     private final CatalogCommandMapper catalogMapper;
+    private final ProductResponseMapper productResponseMapper;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<Page<Product>>> listProducts(
+    public ResponseEntity<ApiResponse<Page<ProductResponse>>> listProducts(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) UUID categoryId,
             @RequestParam(required = false) BigDecimal minPrice,
@@ -43,29 +45,33 @@ public class ProductController {
             @RequestParam(defaultValue = "desc") String sortDir) {
         Sort sort = sortDir.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
         ProductFilter filter = catalogMapper.toProductFilter(search, categoryId, minPrice, maxPrice);
-        Page<Product> products = listProductsUseCase.listProducts(filter, PageRequest.of(page, size, sort));
+        Page<ProductResponse> products = productResponseMapper.toResponse(
+                listProductsUseCase.listProducts(filter, PageRequest.of(page, size, sort)));
         return ResponseEntity.ok(ApiResponse.success(products));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<Product>> getProduct(@PathVariable UUID id) {
-        return ResponseEntity.ok(ApiResponse.success(getProductDetailUseCase.getProduct(id)));
+    public ResponseEntity<ApiResponse<ProductResponse>> getProduct(@PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.success(
+                productResponseMapper.toResponse(getProductDetailUseCase.getProduct(id))));
     }
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<ApiResponse<Product>> createProduct(@Valid @RequestBody ProductRequest request) {
-        Product product = createProductUseCase.createProduct(catalogMapper.toCreateProductCommand(request));
+    public ResponseEntity<ApiResponse<ProductResponse>> createProduct(@Valid @RequestBody ProductRequest request) {
+        ProductResponse product = productResponseMapper.toResponse(
+                createProductUseCase.createProduct(catalogMapper.toCreateProductCommand(request)));
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(product));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<ApiResponse<Product>> updateProduct(@PathVariable UUID id,
-                                                               @Valid @RequestBody ProductRequest request) {
-        Product product = updateProductUseCase.updateProduct(catalogMapper.toUpdateProductCommand(id, request));
+    public ResponseEntity<ApiResponse<ProductResponse>> updateProduct(@PathVariable UUID id,
+                                                                       @Valid @RequestBody ProductRequest request) {
+        ProductResponse product = productResponseMapper.toResponse(
+                updateProductUseCase.updateProduct(catalogMapper.toUpdateProductCommand(id, request)));
         return ResponseEntity.ok(ApiResponse.success(product));
     }
 

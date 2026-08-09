@@ -1,10 +1,11 @@
 package com.commerce.ecommerce.adapter.in.web.cart;
 
+import com.commerce.ecommerce.adapter.in.web.cart.dto.CartResponse;
 import com.commerce.ecommerce.adapter.in.web.common.ApiResponse;
 import com.commerce.ecommerce.adapter.out.persistence.mapper.CartCommandMapper;
+import com.commerce.ecommerce.adapter.out.persistence.mapper.CartResponseMapper;
 import com.commerce.ecommerce.adapter.out.persistence.repository.UserJpaRepository;
 import com.commerce.ecommerce.application.port.in.cart.*;
-import com.commerce.ecommerce.domain.model.Cart;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
@@ -28,37 +29,41 @@ public class CartController {
     private final ClearCartUseCase clearCartUseCase;
     private final UserJpaRepository userJpaRepository;
     private final CartCommandMapper cartMapper;
+    private final CartResponseMapper cartResponseMapper;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<Cart>> getCart(@AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<ApiResponse<CartResponse>> getCart(@AuthenticationPrincipal UserDetails userDetails) {
         UUID userId = resolveUserId(userDetails);
-        return ResponseEntity.ok(ApiResponse.success(getOrCreateCartUseCase.getOrCreateCart(userId)));
+        return ResponseEntity.ok(ApiResponse.success(
+                cartResponseMapper.toResponse(getOrCreateCartUseCase.getOrCreateCart(userId))));
     }
 
     @PostMapping("/items")
-    public ResponseEntity<ApiResponse<Cart>> addItem(@AuthenticationPrincipal UserDetails userDetails,
-                                                      @RequestParam UUID productId,
-                                                      @RequestParam @Positive int quantity) {
+    public ResponseEntity<ApiResponse<CartResponse>> addItem(@AuthenticationPrincipal UserDetails userDetails,
+                                                              @RequestParam UUID productId,
+                                                              @RequestParam @Positive int quantity) {
         UUID userId = resolveUserId(userDetails);
-        Cart cart = addItemToCartUseCase.addItem(cartMapper.toAddItemCommand(userId, productId, quantity));
+        CartResponse cart = cartResponseMapper.toResponse(
+                addItemToCartUseCase.addItem(cartMapper.toAddItemCommand(userId, productId, quantity)));
         return ResponseEntity.ok(ApiResponse.success(cart));
     }
 
     @PutMapping("/items/{productId}")
-    public ResponseEntity<ApiResponse<Cart>> updateItem(@AuthenticationPrincipal UserDetails userDetails,
-                                                         @PathVariable UUID productId,
-                                                         @RequestParam @Positive int quantity) {
+    public ResponseEntity<ApiResponse<CartResponse>> updateItem(@AuthenticationPrincipal UserDetails userDetails,
+                                                                 @PathVariable UUID productId,
+                                                                 @RequestParam @Positive int quantity) {
         UUID userId = resolveUserId(userDetails);
-        Cart cart = updateCartItemQuantityUseCase.updateItemQuantity(
-                cartMapper.toUpdateItemCommand(userId, productId, quantity));
+        CartResponse cart = cartResponseMapper.toResponse(
+                updateCartItemQuantityUseCase.updateItemQuantity(
+                        cartMapper.toUpdateItemCommand(userId, productId, quantity)));
         return ResponseEntity.ok(ApiResponse.success(cart));
     }
 
     @DeleteMapping("/items/{productId}")
-    public ResponseEntity<ApiResponse<Cart>> removeItem(@AuthenticationPrincipal UserDetails userDetails,
-                                                         @PathVariable UUID productId) {
+    public ResponseEntity<ApiResponse<CartResponse>> removeItem(@AuthenticationPrincipal UserDetails userDetails,
+                                                                 @PathVariable UUID productId) {
         UUID userId = resolveUserId(userDetails);
-        Cart cart = removeItemFromCartUseCase.removeItem(userId, productId);
+        CartResponse cart = cartResponseMapper.toResponse(removeItemFromCartUseCase.removeItem(userId, productId));
         return ResponseEntity.ok(ApiResponse.success(cart));
     }
 
