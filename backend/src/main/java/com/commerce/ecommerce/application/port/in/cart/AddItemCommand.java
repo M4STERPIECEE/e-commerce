@@ -12,7 +12,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AddItemCommand {
-    private UUID userId;
+    private String email;
     private UUID productId;
     private int quantity;
 }

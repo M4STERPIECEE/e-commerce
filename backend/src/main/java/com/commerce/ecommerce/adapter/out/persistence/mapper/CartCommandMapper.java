@@ -9,7 +9,7 @@ import java.util.UUID;
 @Mapper(componentModel = "spring")
 public interface CartCommandMapper {
 
-    AddItemCommand toAddItemCommand(UUID userId, UUID productId, int quantity);
+    AddItemCommand toAddItemCommand(String email, UUID productId, int quantity);
 
-    UpdateItemCommand toUpdateItemCommand(UUID userId, UUID productId, int quantity);
+    UpdateItemCommand toUpdateItemCommand(String email, UUID productId, int quantity);
 }

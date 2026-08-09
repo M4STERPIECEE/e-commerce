@@ -4,7 +4,6 @@ import com.commerce.ecommerce.adapter.in.web.cart.dto.CartResponse;
 import com.commerce.ecommerce.adapter.in.web.common.ApiResponse;
 import com.commerce.ecommerce.adapter.out.persistence.mapper.CartCommandMapper;
 import com.commerce.ecommerce.adapter.out.persistence.mapper.CartResponseMapper;
-import com.commerce.ecommerce.adapter.out.persistence.repository.UserJpaRepository;
 import com.commerce.ecommerce.application.port.in.cart.*;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.constraints.Positive;
@@ -27,24 +26,21 @@ public class CartController {
     private final UpdateCartItemQuantityUseCase updateCartItemQuantityUseCase;
     private final RemoveItemFromCartUseCase removeItemFromCartUseCase;
     private final ClearCartUseCase clearCartUseCase;
-    private final UserJpaRepository userJpaRepository;
     private final CartCommandMapper cartMapper;
     private final CartResponseMapper cartResponseMapper;
 
     @GetMapping
     public ResponseEntity<ApiResponse<CartResponse>> getCart(@AuthenticationPrincipal UserDetails userDetails) {
-        UUID userId = resolveUserId(userDetails);
         return ResponseEntity.ok(ApiResponse.success(
-                cartResponseMapper.toResponse(getOrCreateCartUseCase.getOrCreateCart(userId))));
+                cartResponseMapper.toResponse(getOrCreateCartUseCase.getOrCreateCart(userDetails.getUsername()))));
     }
 
     @PostMapping("/items")
     public ResponseEntity<ApiResponse<CartResponse>> addItem(@AuthenticationPrincipal UserDetails userDetails,
                                                               @RequestParam UUID productId,
                                                               @RequestParam @Positive int quantity) {
-        UUID userId = resolveUserId(userDetails);
         CartResponse cart = cartResponseMapper.toResponse(
-                addItemToCartUseCase.addItem(cartMapper.toAddItemCommand(userId, productId, quantity)));
+                addItemToCartUseCase.addItem(cartMapper.toAddItemCommand(userDetails.getUsername(), productId, quantity)));
         return ResponseEntity.ok(ApiResponse.success(cart));
     }
 
@@ -52,31 +48,23 @@ public class CartController {
     public ResponseEntity<ApiResponse<CartResponse>> updateItem(@AuthenticationPrincipal UserDetails userDetails,
                                                                  @PathVariable UUID productId,
                                                                  @RequestParam @Positive int quantity) {
-        UUID userId = resolveUserId(userDetails);
         CartResponse cart = cartResponseMapper.toResponse(
                 updateCartItemQuantityUseCase.updateItemQuantity(
-                        cartMapper.toUpdateItemCommand(userId, productId, quantity)));
+                        cartMapper.toUpdateItemCommand(userDetails.getUsername(), productId, quantity)));
         return ResponseEntity.ok(ApiResponse.success(cart));
     }
 
     @DeleteMapping("/items/{productId}")
     public ResponseEntity<ApiResponse<CartResponse>> removeItem(@AuthenticationPrincipal UserDetails userDetails,
                                                                  @PathVariable UUID productId) {
-        UUID userId = resolveUserId(userDetails);
-        CartResponse cart = cartResponseMapper.toResponse(removeItemFromCartUseCase.removeItem(userId, productId));
+        CartResponse cart = cartResponseMapper.toResponse(
+                removeItemFromCartUseCase.removeItem(userDetails.getUsername(), productId));
         return ResponseEntity.ok(ApiResponse.success(cart));
     }
 
     @DeleteMapping
     public ResponseEntity<ApiResponse<Void>> clearCart(@AuthenticationPrincipal UserDetails userDetails) {
-        UUID userId = resolveUserId(userDetails);
-        clearCartUseCase.clearCart(userId);
+        clearCartUseCase.clearCart(userDetails.getUsername());
         return ResponseEntity.ok(ApiResponse.success("Cart cleared", null));
-    }
-
-    private UUID resolveUserId(UserDetails userDetails) {
-        return userJpaRepository.findByEmail(userDetails.getUsername())
-                .map(e -> e.getId())
-                .orElseThrow();
     }
 }

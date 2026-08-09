@@ -3,8 +3,10 @@ package com.commerce.ecommerce.application.usecase.cart;
 import com.commerce.ecommerce.application.port.in.cart.*;
 import com.commerce.ecommerce.application.port.out.CartRepositoryPort;
 import com.commerce.ecommerce.application.port.out.ProductRepositoryPort;
+import com.commerce.ecommerce.application.port.out.UserRepositoryPort;
 import com.commerce.ecommerce.domain.exception.InsufficientStockException;
 import com.commerce.ecommerce.domain.exception.ProductNotFoundException;
+import com.commerce.ecommerce.domain.exception.UserNotFoundException;
 import com.commerce.ecommerce.domain.model.Cart;
 import com.commerce.ecommerce.domain.model.CartItem;
 import com.commerce.ecommerce.domain.model.Product;
@@ -25,9 +27,17 @@ public class CartService implements GetOrCreateCartUseCase, AddItemToCartUseCase
 
     private final CartRepositoryPort cartRepository;
     private final ProductRepositoryPort productRepository;
+    private final UserRepositoryPort userRepository;
+
+    private UUID resolveUserId(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException(email))
+                .getId();
+    }
 
     @Override
-    public Cart getOrCreateCart(UUID userId) {
+    public Cart getOrCreateCart(String email) {
+        UUID userId = resolveUserId(email);
         return cartRepository.findActiveCartByUserId(userId)
                 .orElseGet(() -> cartRepository.save(Cart.builder()
                         .userId(userId)
@@ -39,7 +49,7 @@ public class CartService implements GetOrCreateCartUseCase, AddItemToCartUseCase
 
     @Override
     public Cart addItem(AddItemCommand command) {
-        Cart cart = getOrCreateCart(command.getUserId());
+        Cart cart = getOrCreateCart(command.getEmail());
         Product product = productRepository.findById(command.getProductId())
                 .orElseThrow(() -> new ProductNotFoundException(command.getProductId()));
 
@@ -47,7 +57,6 @@ public class CartService implements GetOrCreateCartUseCase, AddItemToCartUseCase
             throw new InsufficientStockException(product.getId(), command.getQuantity(), product.getStock());
         }
 
-        // Check if item already in cart
         cart.getItems().stream()
                 .filter(i -> i.getProductId().equals(command.getProductId()))
                 .findFirst()
@@ -65,7 +74,7 @@ public class CartService implements GetOrCreateCartUseCase, AddItemToCartUseCase
 
     @Override
     public Cart updateItemQuantity(UpdateItemCommand command) {
-        Cart cart = getOrCreateCart(command.getUserId());
+        Cart cart = getOrCreateCart(command.getEmail());
         Product product = productRepository.findById(command.getProductId())
                 .orElseThrow(() -> new ProductNotFoundException(command.getProductId()));
 
@@ -82,15 +91,15 @@ public class CartService implements GetOrCreateCartUseCase, AddItemToCartUseCase
     }
 
     @Override
-    public Cart removeItem(UUID userId, UUID productId) {
-        Cart cart = getOrCreateCart(userId);
+    public Cart removeItem(String email, UUID productId) {
+        Cart cart = getOrCreateCart(email);
         cart.getItems().removeIf(i -> i.getProductId().equals(productId));
         return cartRepository.save(cart);
     }
 
     @Override
-    public void clearCart(UUID userId) {
-        Cart cart = getOrCreateCart(userId);
+    public void clearCart(String email) {
+        Cart cart = getOrCreateCart(email);
         cart.getItems().clear();
         cartRepository.save(cart);
     }
