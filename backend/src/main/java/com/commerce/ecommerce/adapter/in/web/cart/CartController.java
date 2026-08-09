@@ -1,6 +1,7 @@
 package com.commerce.ecommerce.adapter.in.web.cart;
 
 import com.commerce.ecommerce.adapter.in.web.common.ApiResponse;
+import com.commerce.ecommerce.adapter.out.persistence.mapper.CartCommandMapper;
 import com.commerce.ecommerce.adapter.out.persistence.repository.UserJpaRepository;
 import com.commerce.ecommerce.application.port.in.cart.*;
 import com.commerce.ecommerce.domain.model.Cart;
@@ -26,6 +27,7 @@ public class CartController {
     private final RemoveItemFromCartUseCase removeItemFromCartUseCase;
     private final ClearCartUseCase clearCartUseCase;
     private final UserJpaRepository userJpaRepository;
+    private final CartCommandMapper cartMapper;
 
     @GetMapping
     public ResponseEntity<ApiResponse<Cart>> getCart(@AuthenticationPrincipal UserDetails userDetails) {
@@ -38,8 +40,7 @@ public class CartController {
                                                       @RequestParam UUID productId,
                                                       @RequestParam @Positive int quantity) {
         UUID userId = resolveUserId(userDetails);
-        Cart cart = addItemToCartUseCase.addItem(AddItemCommand.builder()
-                .userId(userId).productId(productId).quantity(quantity).build());
+        Cart cart = addItemToCartUseCase.addItem(cartMapper.toAddItemCommand(userId, productId, quantity));
         return ResponseEntity.ok(ApiResponse.success(cart));
     }
 
@@ -48,8 +49,8 @@ public class CartController {
                                                          @PathVariable UUID productId,
                                                          @RequestParam @Positive int quantity) {
         UUID userId = resolveUserId(userDetails);
-        Cart cart = updateCartItemQuantityUseCase.updateItemQuantity(UpdateItemCommand.builder()
-                .userId(userId).productId(productId).quantity(quantity).build());
+        Cart cart = updateCartItemQuantityUseCase.updateItemQuantity(
+                cartMapper.toUpdateItemCommand(userId, productId, quantity));
         return ResponseEntity.ok(ApiResponse.success(cart));
     }
 

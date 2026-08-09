@@ -2,6 +2,7 @@ package com.commerce.ecommerce.adapter.in.web.order;
 
 import com.commerce.ecommerce.adapter.in.web.common.ApiResponse;
 import com.commerce.ecommerce.adapter.in.web.order.dto.CheckoutRequest;
+import com.commerce.ecommerce.adapter.out.persistence.mapper.OrderCommandMapper;
 import com.commerce.ecommerce.application.port.in.order.*;
 import com.commerce.ecommerce.domain.model.Order;
 import com.commerce.ecommerce.domain.model.enums.OrderStatus;
@@ -31,12 +32,13 @@ public class OrderController {
     private final ListAllOrdersUseCase listAllOrdersUseCase;
     private final UpdateOrderStatusUseCase updateOrderStatusUseCase;
     private final CancelOrderUseCase cancelOrderUseCase;
+    private final OrderCommandMapper orderMapper;
 
     @PostMapping("/checkout")
     public ResponseEntity<ApiResponse<Order>> checkout(@AuthenticationPrincipal UserDetails userDetails,
             @RequestBody CheckoutRequest request) {
-        Order order = createOrderFromCartUseCase.createOrder(CreateOrderCommand.builder()
-                .email(userDetails.getUsername()).shippingAddress(request.getShippingAddress()).build());
+        Order order = createOrderFromCartUseCase.createOrder(
+                orderMapper.toCreateOrderCommand(userDetails.getUsername(), request));
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(order));
     }
 
@@ -75,8 +77,7 @@ public class OrderController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Order>> updateStatus(@PathVariable UUID id,
             @RequestParam OrderStatus status) {
-        Order order = updateOrderStatusUseCase.updateStatus(UpdateOrderStatusCommand.builder()
-                .orderId(id).newStatus(status).build());
+        Order order = updateOrderStatusUseCase.updateStatus(orderMapper.toUpdateOrderStatusCommand(id, status));
         return ResponseEntity.ok(ApiResponse.success(order));
     }
 }

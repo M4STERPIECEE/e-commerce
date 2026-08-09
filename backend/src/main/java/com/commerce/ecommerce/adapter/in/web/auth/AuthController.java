@@ -5,6 +5,7 @@ import com.commerce.ecommerce.adapter.in.web.auth.dto.RefreshTokenRequest;
 import com.commerce.ecommerce.adapter.in.web.auth.dto.RegisterRequest;
 import com.commerce.ecommerce.adapter.in.web.auth.dto.UserProfileResponse;
 import com.commerce.ecommerce.adapter.in.web.common.ApiResponse;
+import com.commerce.ecommerce.adapter.out.persistence.mapper.AuthMapper;
 import com.commerce.ecommerce.adapter.out.persistence.mapper.UserProfileMapper;
 import com.commerce.ecommerce.application.port.in.auth.*;
 import com.commerce.ecommerce.domain.model.User;
@@ -26,26 +27,19 @@ public class AuthController {
     private final LoginUseCase loginUseCase;
     private final RefreshTokenUseCase refreshTokenUseCase;
     private final GetCurrentUserUseCase getCurrentUserUseCase;
+    private final AuthMapper authMapper;
     private final UserProfileMapper userProfileMapper;
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<UserProfileResponse>> register(@Valid @RequestBody RegisterRequest request) {
-        User user = registerUserUseCase.register(RegisterCommand.builder()
-                .email(request.getEmail())
-                .password(request.getPassword())
-                .firstName(request.getFirstName())
-                .lastName(request.getLastName())
-                .build());
+        User user = registerUserUseCase.register(authMapper.toRegisterCommand(request));
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("User registered successfully", userProfileMapper.toResponse(user)));
     }
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<TokenPair>> login(@Valid @RequestBody LoginRequest request) {
-        TokenPair tokens = loginUseCase.login(LoginCommand.builder()
-                .email(request.getEmail())
-                .password(request.getPassword())
-                .build());
+        TokenPair tokens = loginUseCase.login(authMapper.toLoginCommand(request));
         return ResponseEntity.ok(ApiResponse.success(tokens));
     }
 

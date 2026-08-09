@@ -2,6 +2,7 @@ package com.commerce.ecommerce.adapter.in.web.catalog;
 
 import com.commerce.ecommerce.adapter.in.web.catalog.dto.ProductRequest;
 import com.commerce.ecommerce.adapter.in.web.common.ApiResponse;
+import com.commerce.ecommerce.adapter.out.persistence.mapper.CatalogCommandMapper;
 import com.commerce.ecommerce.application.port.in.catalog.*;
 import com.commerce.ecommerce.domain.model.Product;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -28,6 +29,7 @@ public class ProductController {
     private final ListProductsUseCase listProductsUseCase;
     private final GetProductDetailUseCase getProductDetailUseCase;
     private final UpdateProductStockUseCase updateProductStockUseCase;
+    private final CatalogCommandMapper catalogMapper;
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<Product>>> listProducts(
@@ -40,8 +42,7 @@ public class ProductController {
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDir) {
         Sort sort = sortDir.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
-        ProductFilter filter = ProductFilter.builder()
-                .search(search).categoryId(categoryId).minPrice(minPrice).maxPrice(maxPrice).build();
+        ProductFilter filter = catalogMapper.toProductFilter(search, categoryId, minPrice, maxPrice);
         Page<Product> products = listProductsUseCase.listProducts(filter, PageRequest.of(page, size, sort));
         return ResponseEntity.ok(ApiResponse.success(products));
     }
@@ -55,11 +56,7 @@ public class ProductController {
     @PreAuthorize("hasRole('ADMIN')")
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<ApiResponse<Product>> createProduct(@Valid @RequestBody ProductRequest request) {
-        Product product = createProductUseCase.createProduct(CreateProductCommand.builder()
-                .name(request.getName()).description(request.getDescription())
-                .price(request.getPrice()).stock(request.getStock())
-                .imageUrl(request.getImageUrl()).active(request.isActive())
-                .categoryId(request.getCategoryId()).build());
+        Product product = createProductUseCase.createProduct(catalogMapper.toCreateProductCommand(request));
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(product));
     }
 
@@ -68,11 +65,7 @@ public class ProductController {
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<ApiResponse<Product>> updateProduct(@PathVariable UUID id,
                                                                @Valid @RequestBody ProductRequest request) {
-        Product product = updateProductUseCase.updateProduct(UpdateProductCommand.builder()
-                .id(id).name(request.getName()).description(request.getDescription())
-                .price(request.getPrice()).stock(request.getStock())
-                .imageUrl(request.getImageUrl()).active(request.isActive())
-                .categoryId(request.getCategoryId()).build());
+        Product product = updateProductUseCase.updateProduct(catalogMapper.toUpdateProductCommand(id, request));
         return ResponseEntity.ok(ApiResponse.success(product));
     }
 

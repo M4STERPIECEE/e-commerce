@@ -2,7 +2,7 @@ package com.commerce.ecommerce.adapter.in.web.catalog;
 
 import com.commerce.ecommerce.adapter.in.web.catalog.dto.CategoryRequest;
 import com.commerce.ecommerce.adapter.in.web.common.ApiResponse;
-import com.commerce.ecommerce.application.port.in.catalog.CreateCategoryCommand;
+import com.commerce.ecommerce.adapter.out.persistence.mapper.CategoryCommandMapper;
 import com.commerce.ecommerce.application.port.in.catalog.CreateCategoryUseCase;
 import com.commerce.ecommerce.application.port.in.catalog.ListCategoriesUseCase;
 import com.commerce.ecommerce.application.usecase.catalog.CategoryService;
@@ -26,6 +26,7 @@ public class CategoryController {
     private final CreateCategoryUseCase createCategoryUseCase;
     private final ListCategoriesUseCase listCategoriesUseCase;
     private final CategoryService categoryService;
+    private final CategoryCommandMapper categoryMapper;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<Category>>> listCategories() {
@@ -41,11 +42,7 @@ public class CategoryController {
     @PreAuthorize("hasRole('ADMIN')")
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<ApiResponse<Category>> createCategory(@Valid @RequestBody CategoryRequest request) {
-        Category category = createCategoryUseCase.createCategory(CreateCategoryCommand.builder()
-                .name(request.getName())
-                .slug(request.getSlug())
-                .description(request.getDescription())
-                .build());
+        Category category = createCategoryUseCase.createCategory(categoryMapper.toCreateCategoryCommand(request));
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(category));
     }
 
