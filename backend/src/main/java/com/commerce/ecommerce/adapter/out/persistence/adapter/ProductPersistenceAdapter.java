@@ -44,7 +44,8 @@ public class ProductPersistenceAdapter implements ProductRepositoryPort {
 
     @Override
     public Page<Product> findAll(String search, UUID categoryId, BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable) {
-        return repository.findWithFilters(search, categoryId, minPrice, maxPrice, pageable)
+        String cleanSearch = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
+        return repository.findWithFilters(cleanSearch, categoryId, minPrice, maxPrice, pageable)
                 .map(mapper::toDomain);
     }
 
