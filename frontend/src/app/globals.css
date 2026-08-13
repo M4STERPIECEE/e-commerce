@@ -1,0 +1,56 @@
+@config "../../tailwind.config.js";
+@import "tailwindcss";
+
+@theme inline {
+  --color-ink-50: #f6f7f9;
+  --color-ink-100: #eceef2;
+  --color-ink-200: #d5d9e1;
+  --color-ink-300: #b1b8c7;
+  --color-ink-400: #8791a7;
+  --color-ink-500: #68738c;
+  --color-ink-600: #545d73;
+  --color-ink-700: #464d5e;
+  --color-ink-800: #3c4250;
+  --color-ink-900: #353a45;
+  --color-ink-950: #0f1117;
+
+  --color-accent-50: #fff3ed;
+  --color-accent-100: #ffe4d5;
+  --color-accent-200: #fec6aa;
+  --color-accent-300: #fd9d74;
+  --color-accent-400: #fb6a3c;
+  --color-accent-500: #f94616;
+  --color-accent-600: #ea2d0c;
+  --color-accent-700: #c21f0c;
+  --color-accent-800: #9a1b12;
+  --color-accent-900: #7c1a12;
+  --color-accent-950: #430a05;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  * {
+    @apply border-ink-200;
+  }
+
+  body {
+    @apply bg-white text-ink-900 antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-display font-semibold tracking-tight text-ink-950;
+  }
+}
+
+@layer utilities {
+  .container-page {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+}
