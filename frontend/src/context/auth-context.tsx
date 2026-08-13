@@ -18,6 +18,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const loading = false;
 
     useEffect(() => {
+        if (typeof window !== 'undefined' && localStorage.getItem('maison_tokens')) {
+            api.getMe().then(setUser).catch(() => {
+                api.logout();
+                setUser(null);
+            });
+        }
+
         const interval = setInterval(async () => {
             if (typeof window !== 'undefined' && localStorage.getItem('maison_tokens')) {
                 try { await api.refreshToken(); } catch { api.logout(); setUser(null); }

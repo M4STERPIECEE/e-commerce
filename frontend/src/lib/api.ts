@@ -1,248 +1,494 @@
-import { categories, products, users, seedOrders } from '@/data/mock';
 import type {
     AuthTokens, Category, Order, OrderStatus, PaymentStatus,
     Product, ShippingAddress, User,
 } from '@/types';
 
-const LATENCY = 450;
-const delay = (ms = LATENCY) => new Promise(r => setTimeout(r, ms));
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
 
-const LS = {
-    products: 'maison_products',
-    orders: 'maison_orders',
-    users: 'maison_users',
-    tokens: 'maison_tokens',
-    user: 'maison_current_user',
-    pwd: 'maison_pwd',
-};
-
-function load<T>(key: string, fallback: T): T {
-    if (typeof window === 'undefined') return fallback;
-    try {
-        const raw = localStorage.getItem(key);
-        return raw ? JSON.parse(raw) as T : fallback;
-    } catch { return fallback; }
-}
-function save<T>(key: string, val: T) {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem(key, JSON.stringify(val));
-}
-
-function initStore() {
-    if (typeof window === 'undefined') return;
-    if (!localStorage.getItem(LS.products)) save(LS.products, products);
-    if (!localStorage.getItem(LS.orders)) save(LS.orders, seedOrders);
-    if (!localStorage.getItem(LS.users)) save(LS.users, users);
-    if (!localStorage.getItem(LS.pwd)) {
-        save(LS.pwd, { 'client@maison.fr': 'client123', 'admin@maison.fr': 'admin123' });
-    }
-}
-initStore();
-
-function makeTokens(userId: string): AuthTokens {
-    const payload = btoa(JSON.stringify({ sub: userId, iat: Date.now(), exp: Date.now() + 1000 * 60 * 15 }));
-    const refresh = btoa(JSON.stringify({ sub: userId, iat: Date.now(), exp: Date.now() + 1000 * 60 * 60 * 24 * 7 }));
-    return { accessToken: `mock.${payload}.sig`, refreshToken: `mock.${refresh}.sig` };
-}
-
-function decodeSub(token: string): string | null {
-    try {
-        const payload = token.split('.')[1];
-        return JSON.parse(atob(payload)).sub as string;
-    } catch { return null; }
-}
+const LS_TOKENS = 'maison_tokens';
+const LS_USER = 'maison_current_user';
 
 class ApiError extends Error {
     constructor(public status: number, message: string) { super(message); }
 }
 
+interface BackendUserResponse {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    role: 'USER' | 'ADMIN';
+    createdAt?: string;
+}
+
+interface BackendCategoryResponse {
+    id: string;
+    name: string;
+    slug?: string;
+    description?: string;
+}
+
+interface BackendProductResponse {
+    id: string;
+    name: string;
+    description?: string;
+    price: number | string;
+    stock: number;
+    imageUrl?: string;
+    active?: boolean;
+    categoryId?: string;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+interface BackendPageResponse<T> {
+    content: T[];
+    totalElements: number;
+    totalPages: number;
+    number: number;
+    size: number;
+}
+
+interface BackendOrderItemResponse {
+    id?: string;
+    productId: string;
+    productName?: string;
+    unitPriceSnapshot?: number | string;
+    unitPrice?: number | string;
+    quantity: number;
+    imageUrl?: string;
+}
+
+interface BackendOrderResponse {
+    id: string;
+    userId: string;
+    status: OrderStatus;
+    paymentStatus?: PaymentStatus;
+    totalAmount?: number | string;
+    shippingAddress?: string | ShippingAddress;
+    createdAt: string;
+    updatedAt: string;
+    items?: BackendOrderItemResponse[];
+}
+
+interface BackendPaymentResponse {
+    id: string;
+    orderId: string;
+    status?: PaymentStatus;
+    amount?: number | string;
+    transactionRef?: string;
+    createdAt?: string;
+}
+
+function getTokens(): AuthTokens | null {
+    if (typeof window === 'undefined') return null;
+    try {
+        const raw = localStorage.getItem(LS_TOKENS);
+        return raw ? JSON.parse(raw) : null;
+    } catch {
+        return null;
+    }
+}
+
+function saveTokens(tokens: AuthTokens | null) {
+    if (typeof window === 'undefined') return;
+    if (tokens) {
+        localStorage.setItem(LS_TOKENS, JSON.stringify(tokens));
+    } else {
+        localStorage.removeItem(LS_TOKENS);
+    }
+}
+
+function saveUser(user: User | null) {
+    if (typeof window === 'undefined') return;
+    if (user) {
+        localStorage.setItem(LS_USER, JSON.stringify(user));
+    } else {
+        localStorage.removeItem(LS_USER);
+    }
+}
+
+async function request<T>(
+    endpoint: string,
+    options: RequestInit = {},
+    requireAuth = false
+): Promise<T> {
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...(options.headers as Record<string, string> || {}),
+    };
+
+    let tokens = getTokens();
+    if (requireAuth && tokens?.accessToken) {
+        headers['Authorization'] = `Bearer ${tokens.accessToken}`;
+    }
+
+    let response: Response;
+    try {
+        response = await fetch(`${API_BASE_URL}${endpoint}`, {
+            ...options,
+            headers,
+        });
+    } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Réseau';
+        throw new ApiError(503, `Impossible de contacter le serveur backend (${msg}).`);
+    }
+
+    if (response.status === 401 && requireAuth && tokens?.refreshToken) {
+        try {
+            tokens = await api.refreshToken();
+            headers['Authorization'] = `Bearer ${tokens.accessToken}`;
+            response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                ...options,
+                headers,
+            });
+        } catch {
+            api.logout();
+            throw new ApiError(401, 'Session expirée. Veuillez vous re-connecter.');
+        }
+    }
+
+    const json = await response.json().catch(() => null);
+
+    if (!response.ok) {
+        const message = json?.message || `Erreur ${response.status}`;
+        throw new ApiError(response.status, message);
+    }
+
+    if (json && typeof json.success === 'boolean') {
+        if (!json.success) {
+            throw new ApiError(response.status, json.message || 'Une erreur est survenue');
+        }
+        return json.data as T;
+    }
+
+    return json as T;
+}
+
+const DEFAULT_CATEGORY_IMAGES: Record<string, string> = {
+    vetements: 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=600&auto=format&fit=crop&q=80',
+    accessoires: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=600&auto=format&fit=crop&q=80',
+    maison: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=600&auto=format&fit=crop&q=80',
+    electronique: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&auto=format&fit=crop&q=80',
+};
+
+const DEFAULT_PRODUCT_IMAGE = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80';
+
 export const api = {
     async login(email: string, password: string): Promise<{ user: User; tokens: AuthTokens }> {
-        await delay();
-        const pwdStore = load<Record<string, string>>(LS.pwd, {});
-        const allUsers = load<User[]>(LS.users, []);
-        const user = allUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
-        if (!user || pwdStore[email.toLowerCase()] !== password) {
-            throw new ApiError(401, 'Email ou mot de passe incorrect.');
-        }
-        const tokens = makeTokens(user.id);
-        save(LS.tokens, tokens);
-        save(LS.user, user);
+        const tokens = await request<AuthTokens>('/auth/login', {
+            method: 'POST',
+            body: JSON.stringify({ email, password }),
+        });
+        saveTokens(tokens);
+        const user = await this.getMe();
+        saveUser(user);
         return { user, tokens };
     },
 
     async register(email: string, password: string, firstName: string, lastName: string): Promise<{ user: User; tokens: AuthTokens }> {
-        await delay();
-        const allUsers = load<User[]>(LS.users, []);
-        if (allUsers.some(u => u.email.toLowerCase() === email.toLowerCase())) {
-            throw new ApiError(409, 'Un compte existe déjà avec cet email.');
-        }
+        await request<BackendUserResponse>('/auth/register', {
+            method: 'POST',
+            body: JSON.stringify({ email, password, firstName, lastName }),
+        });
+        return this.login(email, password);
+    },
+
+    async getMe(): Promise<User> {
+        const raw = await request<BackendUserResponse>('/auth/me', { method: 'GET' }, true);
         const user: User = {
-            id: `u-${Date.now()}`, email, firstName, lastName, role: 'USER',
+            id: raw.id,
+            email: raw.email,
+            firstName: raw.firstName,
+            lastName: raw.lastName,
+            role: raw.role,
         };
-        allUsers.push(user);
-        save(LS.users, allUsers);
-        const pwdStore = load<Record<string, string>>(LS.pwd, {});
-        pwdStore[email.toLowerCase()] = password;
-        save(LS.pwd, pwdStore);
-        const tokens = makeTokens(user.id);
-        save(LS.tokens, tokens);
-        save(LS.user, user);
-        return { user, tokens };
+        saveUser(user);
+        return user;
     },
 
     async refreshToken(): Promise<AuthTokens> {
-        await delay(200);
-        const stored = load<AuthTokens | null>(LS.tokens, null);
-        if (!stored) throw new ApiError(401, 'Session expirée.');
-        const userId = decodeSub(stored.refreshToken);
-        if (!userId) throw new ApiError(401, 'Session expirée.');
-        const tokens = makeTokens(userId);
-        save(LS.tokens, tokens);
+        const current = getTokens();
+        if (!current?.refreshToken) throw new ApiError(401, 'Aucun jeton de rafraîchissement disponible');
+        const tokens = await request<AuthTokens>('/auth/refresh', {
+            method: 'POST',
+            body: JSON.stringify({ refreshToken: current.refreshToken }),
+        });
+        saveTokens(tokens);
         return tokens;
     },
 
     getCurrentUser(): User | null {
-        return load<User | null>(LS.user, null);
+        if (typeof window === 'undefined') return null;
+        try {
+            const raw = localStorage.getItem(LS_USER);
+            return raw ? JSON.parse(raw) : null;
+        } catch {
+            return null;
+        }
     },
 
     logout() {
-        localStorage.removeItem(LS.tokens);
-        localStorage.removeItem(LS.user);
+        saveTokens(null);
+        saveUser(null);
     },
 
     async getCategories(): Promise<Category[]> {
-        await delay(250);
-        return categories;
+        const list = await request<BackendCategoryResponse[]>('/categories', { method: 'GET' });
+        return (list || []).map(c => ({
+            id: c.id,
+            name: c.name,
+            slug: c.slug || c.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+            image: DEFAULT_CATEGORY_IMAGES[c.slug || ''] || DEFAULT_CATEGORY_IMAGES.maison,
+            productCount: 12,
+        }));
     },
 
-    async getProducts(params?: { search?: string; categoryId?: string; sort?: string; page?: number; pageSize?: number }): Promise<{ items: Product[]; total: number; page: number; pageSize: number; totalPages: number }> {
-        await delay();
-        let all = load<Product[]>(LS.products, products);
-        if (params?.search) {
-            const q = params.search.toLowerCase();
-            all = all.filter(p => p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q));
+    async getProducts(params?: {
+        search?: string;
+        categoryId?: string;
+        sort?: string;
+        page?: number;
+        pageSize?: number;
+    }): Promise<{ items: Product[]; total: number; page: number; pageSize: number; totalPages: number }> {
+        const queryParams = new URLSearchParams();
+        if (params?.search) queryParams.set('search', params.search);
+        if (params?.categoryId) queryParams.set('categoryId', params.categoryId);
+        if (params?.page) queryParams.set('page', String(params.page - 1));
+        if (params?.pageSize) queryParams.set('size', String(params.pageSize));
+
+        if (params?.sort) {
+            switch (params.sort) {
+                case 'price-asc':
+                    queryParams.set('sortBy', 'price');
+                    queryParams.set('sortDir', 'asc');
+                    break;
+                case 'price-desc':
+                    queryParams.set('sortBy', 'price');
+                    queryParams.set('sortDir', 'desc');
+                    break;
+                case 'newest':
+                    queryParams.set('sortBy', 'createdAt');
+                    queryParams.set('sortDir', 'desc');
+                    break;
+                default:
+                    queryParams.set('sortBy', 'createdAt');
+                    queryParams.set('sortDir', 'desc');
+                    break;
+            }
         }
-        if (params?.categoryId) {
-            all = all.filter(p => p.categoryId === params.categoryId);
-        }
-        switch (params?.sort) {
-            case 'price-asc': all = [...all].sort((a, b) => a.price - b.price); break;
-            case 'price-desc': all = [...all].sort((a, b) => b.price - a.price); break;
-            case 'newest': all = [...all].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)); break;
-            case 'rating': all = [...all].sort((a, b) => b.rating - a.rating); break;
-            default: break;
-        }
-        const page = params?.page ?? 1;
-        const pageSize = params?.pageSize ?? 8;
-        const total = all.length;
-        const totalPages = Math.max(1, Math.ceil(total / pageSize));
-        const start = (page - 1) * pageSize;
-        return { items: all.slice(start, start + pageSize), total, page, pageSize, totalPages };
+
+        const qs = queryParams.toString();
+        const pageData = await request<BackendPageResponse<BackendProductResponse>>(`/products${qs ? `?${qs}` : ''}`, { method: 'GET' });
+        const items: Product[] = (pageData.content || []).map(p => ({
+            id: p.id,
+            name: p.name,
+            slug: p.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+            price: Number(p.price),
+            stock: p.stock,
+            description: p.description || '',
+            categoryId: p.categoryId || '',
+            image: p.imageUrl || DEFAULT_PRODUCT_IMAGE,
+            rating: 4.5,
+            createdAt: p.createdAt || new Date().toISOString(),
+        }));
+
+        return {
+            items,
+            total: pageData.totalElements || items.length,
+            page: (pageData.number || 0) + 1,
+            pageSize: pageData.size || params?.pageSize || 8,
+            totalPages: pageData.totalPages || 1,
+        };
     },
 
     async getProduct(id: string): Promise<Product> {
-        await delay(300);
-        const all = load<Product[]>(LS.products, products);
-        const p = all.find(p => p.id === id);
-        if (!p) throw new ApiError(404, 'Produit introuvable.');
-        return p;
+        const p = await request<BackendProductResponse>(`/products/${id}`, { method: 'GET' });
+        return {
+            id: p.id,
+            name: p.name,
+            slug: p.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+            price: Number(p.price),
+            stock: p.stock,
+            description: p.description || '',
+            categoryId: p.categoryId || '',
+            image: p.imageUrl || DEFAULT_PRODUCT_IMAGE,
+            rating: 4.5,
+            createdAt: p.createdAt || new Date().toISOString(),
+        };
     },
 
     async saveProduct(product: Product): Promise<Product> {
-        await delay();
-        const all = load<Product[]>(LS.products, products);
-        const idx = all.findIndex(p => p.id === product.id);
-        if (idx >= 0) all[idx] = product;
-        else all.unshift(product);
-        save(LS.products, all);
-        return product;
+        const body = {
+            name: product.name,
+            description: product.description,
+            price: product.price,
+            stock: product.stock,
+            imageUrl: product.image,
+            active: true,
+            categoryId: product.categoryId || null,
+        };
+
+        let res: BackendProductResponse;
+        if (product.id && !product.id.startsWith('new-')) {
+            res = await request<BackendProductResponse>(`/products/${product.id}`, {
+                method: 'PUT',
+                body: JSON.stringify(body),
+            }, true);
+        } else {
+            res = await request<BackendProductResponse>('/products', {
+                method: 'POST',
+                body: JSON.stringify(body),
+            }, true);
+        }
+
+        return {
+            id: res.id,
+            name: res.name,
+            slug: res.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+            price: Number(res.price),
+            stock: res.stock,
+            description: res.description || '',
+            categoryId: res.categoryId || '',
+            image: res.imageUrl || DEFAULT_PRODUCT_IMAGE,
+            rating: 4.5,
+            createdAt: res.createdAt || new Date().toISOString(),
+        };
     },
 
     async deleteProduct(id: string): Promise<void> {
-        await delay();
-        const all = load<Product[]>(LS.products, products).filter(p => p.id !== id);
-        save(LS.products, all);
+        await request<void>(`/products/${id}`, { method: 'DELETE' }, true);
     },
 
-    async getMyOrders(userId: string): Promise<Order[]> {
-        await delay();
-        return load<Order[]>(LS.orders, []).filter(o => o.userId === userId).sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+    async getMyOrders(_userId?: string): Promise<Order[]> {
+        const pageData = await request<BackendPageResponse<BackendOrderResponse>>('/orders?page=0&size=50', { method: 'GET' }, true);
+        const list = pageData.content || [];
+        return list.map(o => ({
+            id: o.id,
+            userId: o.userId,
+            items: (o.items || []).map(item => ({
+                productId: item.productId,
+                productName: item.productName || 'Produit',
+                unitPrice: Number(item.unitPriceSnapshot || item.unitPrice || 0),
+                quantity: item.quantity,
+                image: item.imageUrl || DEFAULT_PRODUCT_IMAGE,
+            })),
+            total: Number(o.totalAmount || 0),
+            status: o.status,
+            paymentStatus: o.paymentStatus || 'PENDING',
+            shippingAddress: typeof o.shippingAddress === 'string'
+                ? { fullName: '', line1: o.shippingAddress, city: '', postalCode: '', country: '', phone: '' }
+                : (o.shippingAddress || { fullName: '', line1: '', city: '', postalCode: '', country: '', phone: '' }),
+            createdAt: o.createdAt,
+            updatedAt: o.updatedAt,
+        }));
     },
 
     async getOrder(id: string): Promise<Order> {
-        await delay(300);
-        const order = load<Order[]>(LS.orders, []).find(o => o.id === id);
-        if (!order) throw new ApiError(404, 'Commande introuvable.');
-        return order;
+        const o = await request<BackendOrderResponse>(`/orders/${id}`, { method: 'GET' }, true);
+        return {
+            id: o.id,
+            userId: o.userId,
+            items: (o.items || []).map(item => ({
+                productId: item.productId,
+                productName: item.productName || 'Produit',
+                unitPrice: Number(item.unitPriceSnapshot || item.unitPrice || 0),
+                quantity: item.quantity,
+                image: item.imageUrl || DEFAULT_PRODUCT_IMAGE,
+            })),
+            total: Number(o.totalAmount || 0),
+            status: o.status,
+            paymentStatus: o.paymentStatus || 'PENDING',
+            shippingAddress: typeof o.shippingAddress === 'string'
+                ? { fullName: '', line1: o.shippingAddress, city: '', postalCode: '', country: '', phone: '' }
+                : (o.shippingAddress || { fullName: '', line1: '', city: '', postalCode: '', country: '', phone: '' }),
+            createdAt: o.createdAt,
+            updatedAt: o.updatedAt,
+        };
     },
 
     async getAllOrders(): Promise<Order[]> {
-        await delay();
-        return load<Order[]>(LS.orders, []).sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+        const pageData = await request<BackendPageResponse<BackendOrderResponse>>('/orders/admin/all?page=0&size=50', { method: 'GET' }, true);
+        const list = pageData.content || [];
+        return list.map(o => ({
+            id: o.id,
+            userId: o.userId,
+            items: (o.items || []).map(item => ({
+                productId: item.productId,
+                productName: item.productName || 'Produit',
+                unitPrice: Number(item.unitPriceSnapshot || item.unitPrice || 0),
+                quantity: item.quantity,
+                image: item.imageUrl || DEFAULT_PRODUCT_IMAGE,
+            })),
+            total: Number(o.totalAmount || 0),
+            status: o.status,
+            paymentStatus: o.paymentStatus || 'PENDING',
+            shippingAddress: typeof o.shippingAddress === 'string'
+                ? { fullName: '', line1: o.shippingAddress, city: '', postalCode: '', country: '', phone: '' }
+                : (o.shippingAddress || { fullName: '', line1: '', city: '', postalCode: '', country: '', phone: '' }),
+            createdAt: o.createdAt,
+            updatedAt: o.updatedAt,
+        }));
     },
 
-    async createOrder(userId: string, items: { productId: string; productName: string; unitPrice: number; quantity: number; image: string }[], total: number, shippingAddress: ShippingAddress): Promise<Order> {
-        await delay(600);
-        const all = load<Order[]>(LS.orders, []);
-        const now = new Date().toISOString();
-        const order: Order = {
-            id: `ord-${1000 + all.length + Math.floor(Math.random() * 900)}`,
-            userId,
-            items,
-            total,
-            status: 'PENDING',
-            paymentStatus: 'PENDING',
-            shippingAddress,
-            createdAt: now,
-            updatedAt: now,
+    async createOrder(
+        _?: string,
+        _items?: { productId: string; productName: string; unitPrice: number; quantity: number; image: string }[],
+        total?: number,
+        shippingAddress?: ShippingAddress
+    ): Promise<Order> {
+        const addressString = shippingAddress ? `${shippingAddress.fullName}, ${shippingAddress.line1}, ${shippingAddress.city} ${shippingAddress.postalCode}, ${shippingAddress.country} (Tél: ${shippingAddress.phone})` : '';
+        const o = await request<BackendOrderResponse>('/orders/checkout', {
+            method: 'POST',
+            body: JSON.stringify({ shippingAddress: addressString }),
+        }, true);
+
+        return {
+            id: o.id,
+            userId: o.userId,
+            items: (o.items || []).map(item => ({
+                productId: item.productId,
+                productName: item.productName || 'Produit',
+                unitPrice: Number(item.unitPriceSnapshot || item.unitPrice || 0),
+                quantity: item.quantity,
+                image: item.imageUrl || DEFAULT_PRODUCT_IMAGE,
+            })),
+            total: Number(o.totalAmount || total || 0),
+            status: o.status,
+            paymentStatus: o.paymentStatus || 'PENDING',
+            shippingAddress: shippingAddress || { fullName: '', line1: '', city: '', postalCode: '', country: '', phone: '' },
+            createdAt: o.createdAt,
+            updatedAt: o.updatedAt,
         };
-        all.push(order);
-        save(LS.orders, all);
-        return order;
     },
 
-    async payOrder(orderId: string, cardLast4: string): Promise<{ order: Order; paymentStatus: PaymentStatus }> {
-        await delay(1500);
-        const all = load<Order[]>(LS.orders, []);
-        const order = all.find(o => o.id === orderId);
-        if (!order) throw new ApiError(404, 'Commande introuvable.');
-        const success = cardLast4 !== '0000';
-        order.paymentStatus = success ? 'COMPLETED' : 'FAILED';
-        order.status = success ? 'CONFIRMED' : 'PENDING';
-        order.updatedAt = new Date().toISOString();
-        save(LS.orders, all);
-        return { order, paymentStatus: order.paymentStatus };
+    async payOrder(orderId: string, _cardLast4?: string): Promise<{ order: Order; paymentStatus: PaymentStatus }> {
+        const payRes = await request<BackendPaymentResponse>(`/payments/orders/${orderId}/pay`, {
+            method: 'POST',
+        }, true);
+        const order = await this.getOrder(orderId);
+        return { order, paymentStatus: payRes.status || 'COMPLETED' };
     },
 
     async updateOrderStatus(orderId: string, status: OrderStatus): Promise<Order> {
-        await delay();
-        const all = load<Order[]>(LS.orders, []);
-        const order = all.find(o => o.id === orderId);
-        if (!order) throw new ApiError(404, 'Commande introuvable.');
-        order.status = status;
-        order.updatedAt = new Date().toISOString();
-        save(LS.orders, all);
-        return order;
+        await request<BackendOrderResponse>(`/orders/admin/${orderId}/status?status=${status}`, {
+            method: 'PATCH',
+        }, true);
+        return this.getOrder(orderId);
     },
 
     async cancelOrder(orderId: string): Promise<Order> {
-        await delay();
-        const all = load<Order[]>(LS.orders, []);
-        const order = all.find(o => o.id === orderId);
-        if (!order) throw new ApiError(404, 'Commande introuvable.');
-        if (order.status !== 'PENDING') throw new ApiError(409, 'Seule une commande en attente peut être annulée.');
-        order.status = 'CANCELLED';
-        order.updatedAt = new Date().toISOString();
-        save(LS.orders, all);
-        return order;
+        await request<void>(`/orders/${orderId}/cancel`, { method: 'POST' }, true);
+        return this.getOrder(orderId);
     },
 
     async checkStock(productId: string, quantity: number): Promise<{ available: boolean; stock: number }> {
-        await delay(200);
-        const all = load<Product[]>(LS.products, products);
-        const p = all.find(p => p.id === productId);
-        return { available: !!p && p.stock >= quantity, stock: p?.stock ?? 0 };
+        try {
+            const p = await this.getProduct(productId);
+            return { available: p.stock >= quantity, stock: p.stock };
+        } catch {
+            return { available: false, stock: 0 };
+        }
     },
 };
 
