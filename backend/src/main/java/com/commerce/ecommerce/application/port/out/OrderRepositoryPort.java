@@ -1,7 +1,6 @@
 package com.commerce.ecommerce.application.port.out;
 
 import com.commerce.ecommerce.domain.model.Order;
-import com.commerce.ecommerce.domain.model.enums.OrderStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
