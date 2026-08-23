@@ -1,80 +1,91 @@
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap');
+
 @config "../../tailwind.config.js";
 @import "tailwindcss";
 
-@theme inline {
-  --color-ink-50: #f6f7f9;
-  --color-ink-100: #eceef2;
-  --color-ink-200: #d5d9e1;
-  --color-ink-300: #b1b8c7;
-  --color-ink-400: #8791a7;
-  --color-ink-500: #68738c;
-  --color-ink-600: #545d73;
-  --color-ink-700: #464d5e;
-  --color-ink-800: #3c4250;
-  --color-ink-900: #353a45;
-  --color-ink-950: #0f1117;
-
-  --color-accent-50: #fff3ed;
-  --color-accent-100: #ffe4d5;
-  --color-accent-200: #fec6aa;
-  --color-accent-300: #fd9d74;
-  --color-accent-400: #fb6a3c;
-  --color-accent-500: #f94616;
-  --color-accent-600: #ea2d0c;
-  --color-accent-700: #c21f0c;
-  --color-accent-800: #9a1b12;
-  --color-accent-900: #7c1a12;
-  --color-accent-950: #430a05;
-
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-display), ui-sans-serif, system-ui, sans-serif;
-}
-
 @layer base {
   * {
-    @apply border-ink-200;
+    @apply border-outline-variant/40;
   }
 
   body {
-    @apply bg-ink-50 text-ink-900 antialiased;
+    @apply bg-background text-on-background antialiased selection:bg-primary selection:text-on-primary;
+    font-family: var(--font-inter), 'Inter', sans-serif;
   }
 
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    @apply font-display font-semibold tracking-tight text-ink-950;
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display), 'Plus Jakarta Sans', sans-serif;
   }
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+
+.shimmer-btn {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer-btn::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    to right,
+    rgba(255,255,255,0) 0%,
+    rgba(255,255,255,0.3) 50%,
+    rgba(255,255,255,0) 100%
+  );
+  transform: rotate(30deg) translateY(-50%);
+  animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%) rotate(30deg); }
+  100% { transform: translateX(100%) rotate(30deg); }
+}
+
+.product-card:hover .product-img {
+  transform: scale(1.02);
+}
+.product-card:hover .quick-add {
+  transform: translateY(0);
+  opacity: 1;
 }
 
 @layer components {
   .container-app,
   .container-page {
-    @apply mx-auto w-full max-w-7xl px-6 sm:px-8 lg:px-12;
-  }
-  .skeleton {
-    @apply relative overflow-hidden bg-ink-100 rounded-md;
-  }
-  .skeleton::after {
-    @apply absolute inset-0 -translate-x-full animate-shimmer;
-    content: '';
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
+    @apply mx-auto w-full max-w-container-max px-margin-mobile md:px-margin-desktop;
   }
   .input-base {
-    @apply w-full rounded-lg border border-ink-200 bg-white px-3.5 py-2.5 text-sm text-ink-900
-    placeholder:text-ink-400 transition focus:border-accent-500 focus:outline-none
-    focus:ring-2 focus:ring-accent-500/20 disabled:bg-ink-50 disabled:text-ink-400;
+    @apply w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3.5 py-2.5 text-sm text-on-surface
+    placeholder:text-secondary transition focus:border-primary focus:outline-none
+    focus:ring-2 focus:ring-outline-variant/50 disabled:bg-surface-container-low disabled:text-secondary;
   }
   .input-error {
-    @apply border-danger-400 focus:border-danger-400 focus:ring-danger-400/20;
+    @apply border-error focus:border-error focus:ring-error/20;
   }
   .card {
-    @apply rounded-2xl border border-ink-200/70 bg-white shadow-soft;
+    @apply rounded-xl border border-outline-variant/60 bg-surface-container-lowest shadow-sm;
   }
   .card-hover {
-    @apply transition duration-300 hover:shadow-pop hover:-translate-y-0.5;
+    @apply transition duration-300 hover:shadow-card hover:-translate-y-0.5;
   }
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -82,6 +93,4 @@
 
 @layer utilities {
   .text-balance { text-wrap: balance; }
-  .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
-  .scrollbar-thin::-webkit-scrollbar-thumb { @apply bg-ink-200 rounded-full; }
 }

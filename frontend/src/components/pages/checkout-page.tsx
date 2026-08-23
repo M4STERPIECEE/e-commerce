@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { ArrowLeft, CreditCard, MapPin, Check } from 'lucide-react';
 import { useCart } from '@/context/cart-context';
 import { useAuth } from '@/context/auth-context';
@@ -135,7 +136,7 @@ export function CheckoutPage() {
                         <div className="space-y-3">
                             {items.map(({ product, quantity }) => (
                                 <div key={product.id} className="flex items-center gap-3">
-                                    <img src={product.image} alt={product.name} className="h-14 w-14 rounded-lg object-cover bg-ink-100" />
+                                    <Image src={product.image} alt={product.name} width={56} height={56} className="h-14 w-14 rounded-lg object-cover bg-ink-100" />
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-medium text-ink-900 truncate">{product.name}</p>
                                         <p className="text-xs text-ink-500">×{quantity}</p>

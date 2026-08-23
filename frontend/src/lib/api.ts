@@ -360,7 +360,7 @@ export const api = {
         await request<void>(`/products/${id}`, { method: 'DELETE' }, true);
     },
 
-    async getMyOrders(_userId?: string): Promise<Order[]> {
+    async getMyOrders(): Promise<Order[]> {
         const pageData = await request<BackendPageResponse<BackendOrderResponse>>('/orders?page=0&size=50', { method: 'GET' }, true);
         const list = pageData.content || [];
         return list.map(o => ({
@@ -462,7 +462,7 @@ export const api = {
         };
     },
 
-    async payOrder(orderId: string, _cardLast4?: string): Promise<{ order: Order; paymentStatus: PaymentStatus }> {
+    async payOrder(orderId: string): Promise<{ order: Order; paymentStatus: PaymentStatus }> {
         const payRes = await request<BackendPaymentResponse>(`/payments/orders/${orderId}/pay`, {
             method: 'POST',
         }, true);

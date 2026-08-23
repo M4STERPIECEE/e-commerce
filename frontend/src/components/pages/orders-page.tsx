@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Package, ChevronRight, X, MapPin, CreditCard, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/auth-context';
@@ -25,7 +26,7 @@ export function OrdersPage() {
 
     useEffect(() => {
         if (!user) { router.push('/auth?redirect=/commandes'); return; }
-        api.getMyOrders(user.id)
+        api.getMyOrders()
             .then(setOrders)
             .catch(() => toast('Impossible de charger vos commandes.', 'error'))
             .finally(() => setLoading(false));
@@ -132,7 +133,7 @@ export function OrdersPage() {
                             <div className="space-y-2.5">
                                 {selected.items.map(item => (
                                     <div key={item.productId} className="flex items-center gap-3">
-                                        <img src={item.image} alt={item.productName} className="h-12 w-12 rounded-lg object-cover bg-ink-100" />
+                                        <Image src={item.image} alt={item.productName} width={48} height={48} className="h-12 w-12 rounded-lg object-cover bg-ink-100" />
                                         <div className="flex-1 min-w-0">
                                             <p className="text-sm font-medium truncate">{item.productName}</p>
                                             <p className="text-xs text-ink-500">{formatPrice(item.unitPrice)} × {item.quantity}</p>
