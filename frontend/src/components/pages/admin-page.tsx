@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { LayoutDashboard, Package, ShoppingBag, TrendingUp, Plus, Pencil, Trash2, Search, DollarSign } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/auth-context';
@@ -236,7 +237,7 @@ export function AdminPage() {
                                     const cat = categories.find(c => c.id === product.categoryId);
                                     return (
                                         <div key={product.id} className="card p-4 flex gap-3">
-                                            <img src={product.image} alt={product.name} className="h-16 w-16 rounded-lg object-cover bg-ink-100 shrink-0" />
+                                            <Image src={product.image} alt={product.name} width={64} height={64} className="h-16 w-16 rounded-lg object-cover bg-ink-100 shrink-0" />
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-sm font-medium truncate">{product.name}</p>
                                                 <p className="text-xs text-ink-500">{cat?.name ?? '—'}</p>
@@ -365,7 +366,7 @@ function ProductEditModal({ product, categories, onClose, onSave }: {
                 <Input label="URL de l'image" value={form.image} onChange={e => setForm(f => ({ ...f, image: e.target.value }))} />
                 {form.image && (
                     <div className="flex items-center gap-3">
-                        <img src={form.image} alt="Aperçu" className="h-20 w-20 rounded-lg object-cover bg-ink-100" />
+                        <Image src={form.image} alt="Aperçu" width={80} height={80} className="h-20 w-20 rounded-lg object-cover bg-ink-100" />
                         <p className="text-xs text-ink-400">Aperçu de l&apos;image</p>
                     </div>
                 )}

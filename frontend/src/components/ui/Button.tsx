@@ -12,17 +12,17 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants: Record<Variant, string> = {
-    primary: 'bg-ink-900 text-white hover:bg-ink-800 active:bg-ink-950 shadow-soft',
-    secondary: 'bg-accent-500 text-white hover:bg-accent-600 active:bg-accent-700 shadow-soft',
-    outline: 'border border-ink-300 bg-white text-ink-900 hover:bg-ink-50 active:bg-ink-100',
-    ghost: 'text-ink-700 hover:bg-ink-100 active:bg-ink-200',
-    danger: 'bg-danger-600 text-white hover:bg-danger-700 active:bg-danger-800 shadow-soft',
+    primary: 'bg-primary text-on-primary hover:bg-primary/90 active:bg-black shadow-sm',
+    secondary: 'bg-surface-container-lowest text-primary border border-outline-variant hover:bg-surface-container-low active:bg-surface-container shadow-sm',
+    outline: 'border border-outline-variant bg-transparent text-primary hover:bg-surface-container-low active:bg-surface-container',
+    ghost: 'text-primary hover:bg-surface-container-low active:bg-surface-container',
+    danger: 'bg-error text-on-error hover:bg-error/90 active:bg-error shadow-sm',
 };
 
 const sizes: Record<Size, string> = {
-    sm: 'h-9 px-3.5 text-sm gap-1.5',
-    md: 'h-11 px-5 text-sm gap-2',
-    lg: 'h-12 px-6 text-base gap-2',
+    sm: 'h-9 px-3.5 text-body-sm font-button gap-1.5',
+    md: 'h-11 px-5 text-body-sm font-button gap-2',
+    lg: 'h-12 px-6 text-base font-button gap-2',
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -30,7 +30,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         <button
             ref={ref}
             disabled={disabled || loading}
-            className={`inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-accent-500/30 focus:ring-offset-1 ${variants[variant]} ${sizes[size]} ${fullWidth ? 'w-full' : ''} ${className ?? ''}`}
+            className={`inline-flex items-center justify-center rounded font-button transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-outline-variant/50 ${variants[variant]} ${sizes[size]} ${fullWidth ? 'w-full' : ''} ${className ?? ''}`}
             {...props}
         >
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}

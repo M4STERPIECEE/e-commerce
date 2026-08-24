@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Minus, Plus, Trash2, ShoppingBag, ArrowRight } from 'lucide-react';
 import { useCart } from '@/context/cart-context';
@@ -46,7 +47,7 @@ export function CartPage() {
                     {items.map(({ product, quantity }) => (
                         <div key={product.id} className="card p-3 sm:p-4 flex gap-4 animate-fade-up">
                             <Link href={`/produit/${product.id}`} className="shrink-0">
-                                <img src={product.image} alt={product.name} className="h-20 w-20 sm:h-24 sm:w-24 rounded-lg object-cover bg-ink-100" />
+                                <Image src={product.image} alt={product.name} width={96} height={96} className="h-20 w-20 sm:h-24 sm:w-24 rounded-lg object-cover bg-ink-100" />
                             </Link>
                             <div className="flex flex-1 flex-col">
                                 <div className="flex items-start justify-between gap-2">

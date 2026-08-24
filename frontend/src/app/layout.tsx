@@ -16,14 +16,14 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-    title: 'Maison — L\'essentiel, fait pour durer',
-    description: 'Des pièces sélectionnées avec soin, alliant élégance et fonctionnalité.',
+    title: 'LUXE - Curated essentials for modern life',
+    description: 'Elevate your daily routine with meticulously designed products that blend minimalist aesthetics with uncompromising utility.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
         <html lang="fr" className={`${inter.variable} ${plusJakartaSans.variable}`}>
-            <body>
+            <body className="bg-background text-on-background antialiased selection:bg-primary selection:text-on-primary font-body-lg">
                 <Providers>{children}</Providers>
             </body>
         </html>

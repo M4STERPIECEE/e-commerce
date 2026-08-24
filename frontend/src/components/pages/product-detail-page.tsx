@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { ChevronRight, ShoppingBag, Minus, Plus, Star, ArrowLeft, Check } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -74,8 +75,8 @@ export function ProductDetailPage() {
             <div className="grid gap-8 lg:gap-12 lg:grid-cols-2">
                 {/* Image */}
                 <div className="relative">
-                    <div className="sticky top-24 overflow-hidden rounded-2xl border border-ink-200/70 bg-ink-100 aspect-square">
-                        <img src={product.image} alt={product.name} className="h-full w-full object-cover animate-fade-in" />
+                    <div className="relative sticky top-24 overflow-hidden rounded-2xl border border-ink-200/70 bg-ink-100 aspect-square">
+                        <Image src={product.image} alt={product.name} fill priority sizes="(max-width: 1024px) 100vw, 50vw" className="h-full w-full object-cover animate-fade-in" />
                         {outOfStock && <div className="absolute top-4 left-4"><Badge tone="danger" className="shadow-soft">En rupture de stock</Badge></div>}
                     </div>
                 </div>

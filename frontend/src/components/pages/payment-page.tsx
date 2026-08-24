@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { CreditCard, Lock, CheckCircle2, XCircle, ArrowLeft, Package } from 'lucide-react';
 import { api } from '@/lib/api';
 import { formatPrice, orderStatusLabel, paymentStatusLabel, paymentStatusColor } from '@/lib/format';
@@ -50,8 +51,7 @@ export function PaymentPage() {
         if (!validate() || !order) return;
         setPaying(true);
         try {
-            const last4 = card.number.replace(/\s/g, '').slice(-4);
-            const { paymentStatus } = await api.payOrder(order.id, last4);
+            const { paymentStatus } = await api.payOrder(order.id);
             setPaymentStatus(paymentStatus);
             if (paymentStatus === 'COMPLETED') {
                 toast('Paiement réussi ! Votre commande est confirmée.');
@@ -173,7 +173,7 @@ export function PaymentPage() {
                         <div className="space-y-2.5">
                             {order.items.map(item => (
                                 <div key={item.productId} className="flex items-center gap-2.5">
-                                    <img src={item.image} alt={item.productName} className="h-10 w-10 rounded-md object-cover bg-ink-100" />
+                                    <Image src={item.image} alt={item.productName} width={40} height={40} className="h-10 w-10 rounded-md object-cover bg-ink-100" />
                                     <div className="flex-1 min-w-0">
                                         <p className="text-xs font-medium truncate">{item.productName}</p>
                                         <p className="text-2xs text-ink-500">×{item.quantity}</p>
